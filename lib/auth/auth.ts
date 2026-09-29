@@ -18,3 +18,13 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     email: user.email ?? "",
   };
 }
+
+export async function signOut(): Promise<void> {
+  const supabase = createClient();
+
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    throw error;
+  }
+}
