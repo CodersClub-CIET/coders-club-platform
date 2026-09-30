@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/client";
+import { ApiError, type ApiErrorResponse } from "./errors";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:8000/api";
 
 export async function apiClient<T>(
   endpoint: string,
@@ -15,7 +17,9 @@ export async function apiClient<T>(
 
   const headers = new Headers(options?.headers);
 
-  headers.set("Content-Type", "application/json");
+  if (options?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
 
   if (session?.access_token) {
     headers.set(
@@ -30,7 +34,25 @@ export async function apiClient<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    let errorData: ApiErrorResponse = {};
+
+    try {
+      errorData = await response.json();
+    } catch {
+      // Response may not contain JSON.
+    }
+
+    throw new ApiError(
+      errorData.error?.message ||
+        `API request failed with status ${response.status}`,
+      response.status,
+      errorData.error?.code,
+      errorData.error?.details
+    );
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json();

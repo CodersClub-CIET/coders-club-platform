@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -46,6 +47,7 @@ export default function LoginPage() {
 
         <div className="space-y-2">
           <label htmlFor="email">Email</label>
+
           <input
             id="email"
             type="email"
@@ -58,6 +60,7 @@ export default function LoginPage() {
 
         <div className="space-y-2">
           <label htmlFor="password">Password</label>
+
           <input
             id="password"
             type="password"
@@ -80,6 +83,14 @@ export default function LoginPage() {
           className="w-full rounded-md border px-4 py-2"
         >
           {loading ? "Signing in..." : "Sign in"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => toast.success("Toast system is working!")}
+          className="w-full rounded-md border px-4 py-2"
+        >
+          Test Toast
         </button>
       </form>
     </main>
