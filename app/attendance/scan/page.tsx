@@ -28,7 +28,7 @@ function ScanContent() {
   const [handshake, setHandshake] = useState<HandshakeChallenge | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<number>(90);
+  const [timeLeft, setTimeLeft] = useState<number>(300); // 5 minutes
   const [error, setError] = useState<string | null>(null);
   const [successRecord, setSuccessRecord] = useState<{
     name: string;
@@ -245,10 +245,11 @@ function ScanContent() {
                 </span>
                 <span
                   className={`font-mono font-bold ${
-                    timeLeft <= 20 ? "text-rose-400 animate-pulse" : "text-emerald-400"
+                    timeLeft <= 60 ? "text-rose-400 animate-pulse" : "text-emerald-400"
                   }`}
                 >
-                  {timeLeft}s remaining
+                  {Math.floor(timeLeft / 60).toString().padStart(2, "0")}:
+                  {(timeLeft % 60).toString().padStart(2, "0")} remaining
                 </span>
               </div>
             </div>

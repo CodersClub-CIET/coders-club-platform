@@ -159,8 +159,8 @@ class AttendanceService {
 
   /**
    * Generates a secure temporary QR token for an active session.
-   * Per requirements: QR rotation every few seconds is NOT used.
-   * A signed, time-bounded token is issued.
+   * Configured validity window: EXACTLY 5 MINUTES (300,000 ms).
+   * Adheres strictly to requirements: no high-frequency (every few seconds) rotation.
    */
   async generateSessionQR(sessionId: string): Promise<QRTokenData> {
     const session = await this.getSessionById(sessionId);
@@ -171,11 +171,15 @@ class AttendanceService {
       throw new Error("Cannot generate QR for a closed session.");
     }
 
-    // Temporary signed token seed
+    const QR_VALIDITY_MS = 5 * 60 * 1000; // 5 minutes
+    const issuedAt = Date.now();
+    const expiresAtMs = issuedAt + QR_VALIDITY_MS;
+
+    // Temporary signed token seed with 5-minute expiration
     const rawPayload = JSON.stringify({
       sid: session.id,
-      iat: Date.now(),
-      exp: Date.now() + 1000 * 60 * 60 * 4, // 4 hours valid window for the event
+      iat: issuedAt,
+      exp: expiresAtMs,
       p: session.period,
     });
 
@@ -187,28 +191,37 @@ class AttendanceService {
       sessionId,
       qrToken: token,
       scanUrl,
-      issuedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(),
+      issuedAt: new Date(issuedAt).toISOString(),
+      expiresAt: new Date(expiresAtMs).toISOString(),
     };
   }
 
   /**
    * Performs the anti-replay handshake when a student scans the QR URL.
-   * Generates a single-use challenge token valid for 90 seconds.
+   * 1. Validates that the 5-minute QR code has not expired.
+   * 2. Generates a single-use challenge token valid for 5 minutes (300 seconds).
    */
   async performHandshake(token: string): Promise<HandshakeChallenge> {
     try {
       const decodedStr = typeof window !== "undefined" ? atob(token) : Buffer.from(token, "base64").toString("utf-8");
       const payload = JSON.parse(decodedStr);
 
+      // Verify QR token expiration (5 minutes limit)
+      if (payload.exp && Date.now() > payload.exp) {
+        throw new Error(
+          "This attendance QR code has expired (5-minute validity window reached). Please ask the coordinator to refresh the QR code."
+        );
+      }
+
       const session = await this.getSessionById(payload.sid);
       if (!session || !session.isActive) {
         throw new Error("This attendance session is no longer active.");
       }
 
-      // Generate single-use challenge token
+      // Generate single-use challenge token valid for 5 minutes (300 seconds)
       const challengeToken = `chal-${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
-      const expiresAt = Date.now() + 90 * 1000; // 90 seconds TTL
+      const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+      const expiresAt = Date.now() + CHALLENGE_TTL_MS;
 
       this.activeChallenges.set(challengeToken, {
         sessionId: session.id,
@@ -223,9 +236,12 @@ class AttendanceService {
         subEventName: session.subEventName,
         period: session.period,
         challengeToken,
-        expiresInSeconds: 90,
+        expiresInSeconds: 300, // 5 minutes
       };
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message.includes("expired")) {
+        throw err;
+      }
       throw new Error("Invalid or corrupted QR attendance token.");
     }
   }
@@ -252,7 +268,7 @@ class AttendanceService {
 
     if (Date.now() > challenge.expiresAt) {
       this.activeChallenges.delete(submission.challengeToken);
-      throw new Error("Attendance window expired. Please re-scan the QR code.");
+      throw new Error("Attendance window expired (5 minutes). Please re-scan the QR code.");
     }
 
     if (challenge.consumed) {
