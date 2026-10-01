@@ -8,24 +8,20 @@ import Link from "next/link";
 import {
   HandshakeChallenge,
   StudentAttendanceSubmission,
-  AssociateAttendanceSubmission,
   AttendanceSession,
   DEPARTMENTS,
 } from "@/lib/attendance/types";
 import { attendanceService } from "@/lib/attendance/attendance-service";
-import {
-  validateStudentSubmission,
-  validateAssociateSubmission,
-} from "@/lib/attendance/validation";
+import { validateStudentSubmission } from "@/lib/attendance/validation";
 import { Button } from "@/components/ui/button";
 import {
   AlertCircle,
   ArrowLeft,
-  Briefcase,
   CheckCircle2,
   Clock,
   GraduationCap,
   Layers,
+  Lock,
   QrCode,
   RefreshCw,
   ShieldAlert,
@@ -33,25 +29,22 @@ import {
   Sun,
   Moon,
   Sparkles,
-  UserCheck,
 } from "lucide-react";
 
-const ASSOCIATE_ROLES = [
-  "Club Executive",
-  "Event Coordinator",
-  "Technical Volunteer",
-  "Design Lead",
-  "Core Team Member",
-] as const;
+interface DeviceAttendanceRecord {
+  sessionId: string;
+  studentRegNo: string;
+  studentName: string;
+  department: string;
+  year: number;
+  section: string;
+  markedAt: string;
+}
 
 function ScanContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  const modeParam = searchParams.get("mode");
 
-  const [attendeeMode, setAttendeeMode] = useState<"student" | "associate">(
-    modeParam === "associate" ? "associate" : "student"
-  );
   const [handshake, setHandshake] = useState<HandshakeChallenge | null>(null);
   const [activeSessions, setActiveSessions] = useState<AttendanceSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string>("");
@@ -61,10 +54,12 @@ function ScanContent() {
   const [error, setError] = useState<string | null>(null);
   const [noActiveSessions, setNoActiveSessions] = useState(false);
 
+  // Device-level restriction: Only once per phone per session
+  const [deviceSubmission, setDeviceSubmission] = useState<DeviceAttendanceRecord | null>(null);
+
   const [successRecord, setSuccessRecord] = useState<{
     name: string;
     identifier: string;
-    type: "student" | "associate";
     roleOrClass: string;
     department: string;
     markedAt: string;
@@ -85,18 +80,19 @@ function ScanContent() {
     section: "A",
   });
 
-  // Associate Form State
-  const [associateForm, setAssociateForm] = useState<{
-    associateUserId: string;
-    associateName: string;
-    department: string;
-    role: string;
-  }>({
-    associateUserId: "",
-    associateName: "",
-    department: "CSE",
-    role: "Event Coordinator",
-  });
+  // Check if this device has already submitted attendance for the session
+  const checkDeviceLock = (sessionId: string): DeviceAttendanceRecord | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const stored = localStorage.getItem(`coders_club_device_attendance_${sessionId}`);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  };
 
   // 1. Initialize Verification / Handshake
   const initVerification = async () => {
@@ -105,9 +101,7 @@ function ScanContent() {
       setError(null);
       setNoActiveSessions(false);
 
-      if (modeParam === "associate") {
-        setAttendeeMode("associate");
-      }
+      let targetSessionId = "";
 
       // If a QR token is present in the URL query string:
       if (token) {
@@ -116,14 +110,20 @@ function ScanContent() {
           setHandshake(challenge);
           setTimeLeft(challenge.expiresInSeconds);
           setSelectedSessionId(challenge.sessionId);
-          if (challenge.targetAttendeeType === "associate" || modeParam === "associate") {
-            setAttendeeMode("associate");
+          targetSessionId = challenge.sessionId;
+
+          // Check if this device already submitted for this session
+          const existingLock = checkDeviceLock(challenge.sessionId);
+          if (existingLock) {
+            setDeviceSubmission(existingLock);
+          } else {
+            setDeviceSubmission(null);
           }
+
           setLoading(false);
           return;
         } catch (err: unknown) {
-          // Token expired or invalid — check active sessions for direct fallback
-          console.warn("QR Token verification failed, checking active sessions fallback", err);
+          console.warn("QR Token verification fallback to active session:", err);
           setError(err instanceof Error ? err.message : "QR token expired or invalid.");
         }
       }
@@ -144,16 +144,20 @@ function ScanContent() {
 
       // Automatically bind to the first active session
       const targetSession = active[0];
+      targetSessionId = targetSession.id;
       setSelectedSessionId(targetSession.id);
 
-      const targetType = modeParam === "associate" ? "associate" : "student";
-      const challenge = await attendanceService.createDirectChallenge(targetSession.id, targetType);
+      // Check device lock
+      const existingLock = checkDeviceLock(targetSession.id);
+      if (existingLock) {
+        setDeviceSubmission(existingLock);
+      } else {
+        setDeviceSubmission(null);
+      }
 
+      const challenge = await attendanceService.createDirectChallenge(targetSession.id, "student");
       setHandshake(challenge);
       setTimeLeft(challenge.expiresInSeconds);
-      if (modeParam === "associate") {
-        setAttendeeMode("associate");
-      }
       setLoading(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to initialize attendance verification.");
@@ -163,7 +167,7 @@ function ScanContent() {
 
   useEffect(() => {
     initVerification();
-  }, [token, modeParam]);
+  }, [token]);
 
   // Handle manual session switch when multiple active sessions exist
   const handleSessionChange = async (sessionId: string) => {
@@ -171,7 +175,16 @@ function ScanContent() {
       setLoading(true);
       setError(null);
       setSelectedSessionId(sessionId);
-      const newChallenge = await attendanceService.createDirectChallenge(sessionId, attendeeMode);
+
+      // Check device lock for this switched session
+      const existingLock = checkDeviceLock(sessionId);
+      if (existingLock) {
+        setDeviceSubmission(existingLock);
+      } else {
+        setDeviceSubmission(null);
+      }
+
+      const newChallenge = await attendanceService.createDirectChallenge(sessionId, "student");
       setHandshake(newChallenge);
       setTimeLeft(newChallenge.expiresInSeconds);
     } catch (err: unknown) {
@@ -183,7 +196,7 @@ function ScanContent() {
 
   // 2. Countdown timer for anti-replay challenge window (5 minutes)
   useEffect(() => {
-    if (!handshake || successRecord || timeLeft <= 0) return;
+    if (!handshake || successRecord || deviceSubmission || timeLeft <= 0) return;
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
@@ -197,7 +210,7 @@ function ScanContent() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [handshake, successRecord, timeLeft]);
+  }, [handshake, successRecord, deviceSubmission, timeLeft]);
 
   // Handle Refresh Security Window
   const handleRenewChallenge = async () => {
@@ -208,7 +221,7 @@ function ScanContent() {
     try {
       setLoading(true);
       setError(null);
-      const renewed = await attendanceService.createDirectChallenge(targetSessionId, attendeeMode);
+      const renewed = await attendanceService.createDirectChallenge(targetSessionId, "student");
       setHandshake(renewed);
       setTimeLeft(renewed.expiresInSeconds);
     } catch (err: unknown) {
@@ -222,6 +235,14 @@ function ScanContent() {
   const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!handshake) return;
+
+    // 1. Device Lock Check: Block multiple submissions from the same phone
+    const existingLock = checkDeviceLock(handshake.sessionId);
+    if (existingLock) {
+      setDeviceSubmission(existingLock);
+      setError("This phone has already submitted attendance for this session. Only one submission is allowed per device.");
+      return;
+    }
 
     const payload: StudentAttendanceSubmission = {
       challengeToken: handshake.challengeToken,
@@ -243,54 +264,36 @@ function ScanContent() {
       setSubmitting(true);
       setError(null);
       const record = await attendanceService.submitStudentAttendance(payload);
+
+      // Lock this device permanently for this session so another response cannot be uploaded
+      const deviceRecord: DeviceAttendanceRecord = {
+        sessionId: handshake.sessionId,
+        studentRegNo: record.studentRegNo || studentForm.studentRegNo.trim().toUpperCase(),
+        studentName: record.studentName || studentForm.studentName.trim(),
+        department: studentForm.department,
+        year: Number(studentForm.year),
+        section: studentForm.section.toUpperCase(),
+        markedAt: record.markedAt,
+      };
+
+      try {
+        localStorage.setItem(
+          `coders_club_device_attendance_${handshake.sessionId}`,
+          JSON.stringify(deviceRecord)
+        );
+      } catch {
+        // ignore storage errors
+      }
+
       setSuccessRecord({
-        name: record.studentName || studentForm.studentName,
-        identifier: record.studentRegNo || studentForm.studentRegNo,
-        type: "student",
+        name: deviceRecord.studentName,
+        identifier: deviceRecord.studentRegNo,
         roleOrClass: `${studentForm.year} (${studentForm.section.toUpperCase()})`,
         department: studentForm.department,
         markedAt: record.markedAt,
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to record attendance.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Handle Associate / Coordinator Submission
-  const handleAssociateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!handshake) return;
-
-    const payload: AssociateAttendanceSubmission = {
-      challengeToken: handshake.challengeToken,
-      associateUserId: associateForm.associateUserId.trim(),
-      associateName: associateForm.associateName.trim(),
-      department: associateForm.department,
-      role: associateForm.role,
-    };
-
-    const validation = validateAssociateSubmission(payload);
-    if (!validation.isValid) {
-      setError(validation.errors[0]);
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      setError(null);
-      const record = await attendanceService.submitAssociateAttendance(payload);
-      setSuccessRecord({
-        name: record.associateName || associateForm.associateName,
-        identifier: record.associateUserId || associateForm.associateUserId.toUpperCase(),
-        type: "associate",
-        roleOrClass: associateForm.role,
-        department: associateForm.department,
-        markedAt: record.markedAt,
-      });
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to record coordinator attendance.");
     } finally {
       setSubmitting(false);
     }
@@ -351,6 +354,61 @@ function ScanContent() {
               </Link>
             </div>
           </div>
+        ) : deviceSubmission ? (
+          /* DEVICE LOCKED STATE: Already filled once from this phone */
+          <div className="py-6 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
+            <div className="p-3.5 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 mb-3">
+              <Lock className="size-9" />
+            </div>
+            <h2 className="text-lg font-extrabold text-white mb-1">
+              Attendance Already Recorded
+            </h2>
+            <p className="text-xs text-emerald-300 font-medium mb-5 max-w-xs leading-relaxed">
+              This phone has already submitted attendance for this session. Only one response per device is permitted.
+            </p>
+
+            <div className="w-full bg-slate-950/70 rounded-2xl p-4 border border-slate-800 text-left space-y-2 mb-5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-400">Student:</span>
+                <span className="font-semibold text-white">{deviceSubmission.studentName}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-400">Reg Number:</span>
+                <span className="font-mono font-semibold text-indigo-300">
+                  {deviceSubmission.studentRegNo}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-400">Department:</span>
+                <span className="font-medium text-slate-200">{deviceSubmission.department}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-400">Class & Sec:</span>
+                <span className="font-medium text-slate-200">
+                  {deviceSubmission.year} ({deviceSubmission.section})
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-400">Event:</span>
+                <span className="font-medium text-slate-200">{handshake?.eventName}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-400">Period:</span>
+                <span className="capitalize font-medium text-amber-400">{handshake?.period}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-400">Submitted At:</span>
+                <span className="font-mono text-slate-400">
+                  {new Date(deviceSubmission.markedAt).toLocaleTimeString()}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+              <Sparkles className="size-3.5 text-indigo-400 shrink-0" />
+              <span>Response locked to this device. You may close this tab.</span>
+            </div>
+          </div>
         ) : error && !handshake ? (
           /* Error State with fallback options */
           <div className="py-8 text-center flex flex-col items-center">
@@ -378,60 +436,32 @@ function ScanContent() {
             </div>
           </div>
         ) : successRecord ? (
-          /* Success Screen */
+          /* Success Screen (Immediately locks device - no re-submission) */
           <div className="py-6 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
-            <div
-              className={`p-3 rounded-2xl mb-3 border ${
-                successRecord.type === "associate"
-                  ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
-                  : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-              }`}
-            >
-              {successRecord.type === "associate" ? (
-                <UserCheck className="size-10" />
-              ) : (
-                <CheckCircle2 className="size-10" />
-              )}
+            <div className="p-3.5 rounded-2xl mb-3 border bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+              <CheckCircle2 className="size-10" />
             </div>
             <h2 className="text-xl font-extrabold text-white mb-1">
-              {successRecord.type === "associate"
-                ? "Coordinator Check-in Confirmed!"
-                : "Attendance Confirmed!"}
+              Attendance Confirmed!
             </h2>
-            <p
-              className={`text-xs font-medium mb-5 ${
-                successRecord.type === "associate" ? "text-purple-300" : "text-emerald-300"
-              }`}
-            >
+            <p className="text-xs font-medium text-emerald-300 mb-5">
               Presence successfully verified and recorded in CIET database.
             </p>
 
             <div className="w-full bg-slate-950/70 rounded-2xl p-4 border border-slate-800 text-left space-y-2 mb-5">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Attendee:</span>
+                <span className="text-slate-400">Student:</span>
                 <span className="font-semibold text-white">{successRecord.name}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">
-                  {successRecord.type === "associate" ? "Coordinator ID:" : "Reg Number:"}
-                </span>
+                <span className="text-slate-400">Reg Number:</span>
                 <span className="font-mono font-semibold text-indigo-300">
                   {successRecord.identifier}
                 </span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">
-                  {successRecord.type === "associate" ? "Club Role:" : "Class & Sec:"}
-                </span>
-                <span
-                  className={
-                    successRecord.type === "associate"
-                      ? "px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                      : "font-medium text-slate-200"
-                  }
-                >
-                  {successRecord.roleOrClass}
-                </span>
+                <span className="text-slate-400">Class & Sec:</span>
+                <span className="font-medium text-slate-200">{successRecord.roleOrClass}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">Department:</span>
@@ -453,22 +483,19 @@ function ScanContent() {
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-2.5 w-full">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setSuccessRecord(null);
-                  handleRenewChallenge();
-                }}
-                className="w-full bg-slate-800 hover:bg-slate-700 border-slate-700 text-white text-xs font-semibold py-2 rounded-xl transition-all"
-              >
-                Record Another Check-in
-              </Button>
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
-                <Sparkles className="size-3.5 text-indigo-400" />
-                <span>You may now close this browser tab.</span>
+            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-left w-full mb-4">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-300 mb-1">
+                <Lock className="size-3.5" />
+                <span>Single-Device Restriction</span>
               </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Attendance has been locked to this device for this session. Multiple responses from the same phone are prohibited.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+              <Sparkles className="size-3.5 text-indigo-400" />
+              <span>You may now close this browser tab.</span>
             </div>
           </div>
         ) : (
@@ -539,40 +566,6 @@ function ScanContent() {
               </div>
             )}
 
-            {/* Segmented Mode Selector: Student vs Coordinator */}
-            <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setAttendeeMode("student");
-                  setError(null);
-                }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                  attendeeMode === "student"
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                <GraduationCap className="size-4" />
-                Student Check-in
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAttendeeMode("associate");
-                  setError(null);
-                }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                  attendeeMode === "associate"
-                    ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                <Briefcase className="size-4" />
-                Coordinator Check-in
-              </button>
-            </div>
-
             {/* Error Message */}
             {error && (
               <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-start gap-2 mb-4">
@@ -581,190 +574,101 @@ function ScanContent() {
               </div>
             )}
 
-            {/* Form Rendering by Mode */}
-            {attendeeMode === "student" ? (
-              /* STUDENT FORM */
-              <form onSubmit={handleStudentSubmit} className="space-y-3.5">
+            {/* STUDENT FORM ONLY */}
+            <form onSubmit={handleStudentSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Registration Number <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 917621104001"
+                  value={studentForm.studentRegNo}
+                  onChange={(e) =>
+                    setStudentForm({ ...studentForm, studentRegNo: e.target.value })
+                  }
+                  className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white font-mono placeholder-slate-500 focus:outline-none focus:border-indigo-500 uppercase"
+                />
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  Limited to one submission per student and device
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Full Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Aarav Kumar"
+                  value={studentForm.studentName}
+                  onChange={(e) =>
+                    setStudentForm({ ...studentForm, studentName: e.target.value })
+                  }
+                  className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Registration Number <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 917621104001"
-                    value={studentForm.studentRegNo}
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Dept</label>
+                  <select
+                    value={studentForm.department}
                     onChange={(e) =>
-                      setStudentForm({ ...studentForm, studentRegNo: e.target.value })
+                      setStudentForm({ ...studentForm, department: e.target.value })
                     }
-                    className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white font-mono placeholder-slate-500 focus:outline-none focus:border-indigo-500 uppercase"
-                  />
-                  <span className="text-[10px] text-slate-500 mt-0.5 block">
-                    Duplicate submissions per session are automatically rejected
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Full Name <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Aarav Kumar"
-                    value={studentForm.studentName}
-                    onChange={(e) =>
-                      setStudentForm({ ...studentForm, studentName: e.target.value })
-                    }
-                    className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Dept</label>
-                    <select
-                      value={studentForm.department}
-                      onChange={(e) =>
-                        setStudentForm({ ...studentForm, department: e.target.value })
-                      }
-                      className="w-full px-2 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
-                    >
-                      {DEPARTMENTS.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Year</label>
-                    <select
-                      value={studentForm.year}
-                      onChange={(e) =>
-                        setStudentForm({ ...studentForm, year: Number(e.target.value) })
-                      }
-                      className="w-full px-2 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
-                    >
-                      <option value={1}>1</option>
-                      <option value={2}>2</option>
-                      <option value={3}>3</option>
-                      <option value={4}>4</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Sec</label>
-                    <select
-                      value={studentForm.section}
-                      onChange={(e) =>
-                        setStudentForm({ ...studentForm, section: e.target.value })
-                      }
-                      className="w-full px-2 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
-                    >
-                      <option value="A">A</option>
-                      <option value="B">B</option>
-                      <option value="C">C</option>
-                    </select>
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={submitting || timeLeft <= 0}
-                  className="w-full mt-2 py-2.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg transition-all disabled:opacity-50"
-                >
-                  {submitting ? "Verifying & Recording..." : "Confirm Student Attendance"}
-                </Button>
-              </form>
-            ) : (
-              /* COORDINATOR / ASSOCIATE FORM */
-              <form onSubmit={handleAssociateSubmit} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Coordinator ID / Reg No <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. CIET-CORD-01 or 917621104001"
-                    value={associateForm.associateUserId}
-                    onChange={(e) =>
-                      setAssociateForm({ ...associateForm, associateUserId: e.target.value })
-                    }
-                    className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white font-mono placeholder-slate-500 focus:outline-none focus:border-purple-500 uppercase"
-                  />
-                  <span className="text-[10px] text-slate-500 mt-0.5 block">
-                    Cross-verified against Supabase database for duplicate entries
-                  </span>
+                    className="w-full px-2 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    {DEPARTMENTS.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Full Name <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Gowtham R"
-                    value={associateForm.associateName}
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Year</label>
+                  <select
+                    value={studentForm.year}
                     onChange={(e) =>
-                      setAssociateForm({ ...associateForm, associateName: e.target.value })
+                      setStudentForm({ ...studentForm, year: Number(e.target.value) })
                     }
-                    className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
-                  />
+                    className="w-full px-2 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value={1}>1</option>
+                    <option value={2}>2</option>
+                    <option value={3}>3</option>
+                    <option value={4}>4</option>
+                  </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Club Role
-                    </label>
-                    <select
-                      value={associateForm.role}
-                      onChange={(e) =>
-                        setAssociateForm({ ...associateForm, role: e.target.value })
-                      }
-                      className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500"
-                    >
-                      {ASSOCIATE_ROLES.map((role) => (
-                        <option key={role} value={role}>
-                          {role}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Department
-                    </label>
-                    <select
-                      value={associateForm.department}
-                      onChange={(e) =>
-                        setAssociateForm({ ...associateForm, department: e.target.value })
-                      }
-                      className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500"
-                    >
-                      {DEPARTMENTS.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Sec</label>
+                  <select
+                    value={studentForm.section}
+                    onChange={(e) =>
+                      setStudentForm({ ...studentForm, section: e.target.value })
+                    }
+                    className="w-full px-2 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                  </select>
                 </div>
+              </div>
 
-                <Button
-                  type="submit"
-                  disabled={submitting || timeLeft <= 0}
-                  className="w-full mt-2 py-2.5 text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg transition-all disabled:opacity-50"
-                >
-                  {submitting ? "Verifying & Recording..." : "Confirm Coordinator Attendance"}
-                </Button>
-              </form>
-            )}
+              <Button
+                type="submit"
+                disabled={submitting || timeLeft <= 0}
+                className="w-full mt-2 py-2.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg transition-all disabled:opacity-50"
+              >
+                {submitting ? "Verifying & Recording..." : "Confirm Student Attendance"}
+              </Button>
+            </form>
           </div>
         )}
 

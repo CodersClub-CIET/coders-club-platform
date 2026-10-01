@@ -2,7 +2,6 @@ import React from "react";
 import Link from "next/link";
 import {
   Activity,
-  Award,
   Calendar,
   CheckCircle2,
   FileText,
@@ -43,12 +42,6 @@ export default function Home() {
               Attendance
             </Link>
             <Link
-              href="/scores"
-              className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-1.5 rounded-lg transition-colors hidden sm:inline-block"
-            >
-              Score Board
-            </Link>
-            <Link
               href="/login"
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/30"
             >
@@ -76,12 +69,12 @@ export default function Home() {
 
           <p className="mt-4 text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
             The unified platform for Coimbatore Institute of Engineering and Technology’s
-            Coders Club. Server-authoritative 5-minute QR attendance, live coordinator feeds, OD letter generation, and real-time scoreboards.
+            Coders Club. Server-authoritative 5-minute QR attendance, single-device anti-proxy check-in, and institutional OD letter generation.
           </p>
         </div>
 
         {/* Feature Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-6 w-full">
           {/* Card 1: Attendance Management */}
           <div className="group relative bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-indigo-500/50 rounded-3xl p-6 transition-all shadow-xl hover:shadow-indigo-500/10 flex flex-col justify-between">
             <div>
@@ -104,7 +97,7 @@ export default function Home() {
               </h2>
 
               <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                Launch morning/afternoon sessions, project high-contrast 5-minute QR codes with anti-replay challenge verification, and record both student and associate presences.
+                Launch morning/afternoon sessions, project high-contrast 5-minute QR codes with anti-replay challenge verification, and record verified student presence.
               </p>
 
               <div className="space-y-1.5 mb-6 text-[11px] text-slate-300">
@@ -114,7 +107,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="size-3.5 text-indigo-400 shrink-0" />
-                  <span>Student & Associate check-in portals</span>
+                  <span>Strict single-device check-in restriction</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="size-3.5 text-indigo-400 shrink-0" />
@@ -175,55 +168,6 @@ export default function Home() {
             >
               <span>View OD Generator</span>
               <FileText className="size-3.5" />
-            </Link>
-          </div>
-
-          {/* Card 3: Score Management */}
-          <div className="group relative bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-500/50 rounded-3xl p-6 transition-all shadow-xl hover:shadow-amber-500/10 flex flex-col justify-between">
-            <div>
-              <div className="size-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                <Award className="size-6" />
-              </div>
-
-              <div className="flex items-center gap-2 mb-2">
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  Evaluation
-                </span>
-                <span className="text-[10px] text-amber-400 font-semibold">
-                  Hackathon Ready
-                </span>
-              </div>
-
-              <h2 className="text-lg font-bold text-white mb-2">
-                Score Management
-              </h2>
-
-              <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                Record and calculate criteria-based scores for participants and teams. Real-time ranking calculation with strict schema validation.
-              </p>
-
-              <div className="space-y-1.5 mb-6 text-[11px] text-slate-300">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="size-3.5 text-amber-400 shrink-0" />
-                  <span>Validation rules & criteria weighting</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="size-3.5 text-amber-400 shrink-0" />
-                  <span>Dynamic leaderboard calculation</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="size-3.5 text-amber-400 shrink-0" />
-                  <span>Multi-evaluator consensus</span>
-                </div>
-              </div>
-            </div>
-
-            <Link
-              href="/scores"
-              className="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-600/30"
-            >
-              <span>Go to Score Management</span>
-              <Award className="size-3.5" />
             </Link>
           </div>
         </div>

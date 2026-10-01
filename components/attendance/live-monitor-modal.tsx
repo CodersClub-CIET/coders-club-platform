@@ -220,34 +220,24 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-4 px-6 py-4 border-b border-slate-100 bg-white shrink-0">
+        <div className="grid grid-cols-2 gap-4 px-6 py-4 border-b border-slate-100 bg-white shrink-0">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
             <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
-              <Users className="size-4" />
+              <GraduationCap className="size-4" />
             </div>
             <div>
-              <div className="text-xs font-medium text-slate-500">Total Present</div>
+              <div className="text-xs font-medium text-slate-500">Verified Students</div>
               <div className="text-xl font-extrabold text-slate-900">{records.length}</div>
             </div>
           </div>
 
           <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
-              <GraduationCap className="size-4" />
+            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+              <BarChart2 className="size-4" />
             </div>
             <div>
-              <div className="text-xs font-medium text-slate-500">Students</div>
-              <div className="text-xl font-extrabold text-slate-900">{studentCount}</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
-              <UserCheck className="size-4" />
-            </div>
-            <div>
-              <div className="text-xs font-medium text-slate-500">Associates</div>
-              <div className="text-xl font-extrabold text-slate-900">{associateCount}</div>
+              <div className="text-xs font-medium text-slate-500">Departments Represented</div>
+              <div className="text-xl font-extrabold text-slate-900">{Object.keys(deptCounts).length}</div>
             </div>
           </div>
         </div>
@@ -273,55 +263,17 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
           </div>
         )}
 
-        {/* Search & Filter Bar */}
+        {/* Search Bar */}
         <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search Reg No, Name, Dept..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-
-            <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setAttendeeFilter("all")}
-                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
-                  attendeeFilter === "all"
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                All ({records.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setAttendeeFilter("student")}
-                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
-                  attendeeFilter === "student"
-                    ? "bg-indigo-600 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                Participants ({studentCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setAttendeeFilter("associate")}
-                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
-                  attendeeFilter === "associate"
-                    ? "bg-purple-600 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                Coordinators ({associateCount})
-              </button>
-            </div>
+          <div className="relative w-72">
+            <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search Reg No, Student Name, Dept..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+            />
           </div>
 
           <div className="text-xs text-slate-400 font-mono">
