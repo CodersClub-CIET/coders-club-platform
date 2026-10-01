@@ -798,7 +798,7 @@ class AttendanceService {
       const regNo = r.studentRegNo || "N/A";
       const name = r.studentName || r.associateName || "N/A";
       const dept = r.studentDepartment || "Executive";
-      const year = r.studentYear ? `Yr ${r.studentYear}` : "N/A";
+      const year = r.studentYear ? `${r.studentYear}` : "N/A";
       const section = r.studentSection || "N/A";
       const time = new Date(r.markedAt).toLocaleString();
       const method = r.verificationMethod === "qr_scan" ? "QR Scanned" : "Manual Entry";

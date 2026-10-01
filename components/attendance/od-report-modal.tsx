@@ -244,7 +244,7 @@ export default function ODReportModal({ session, isOpen, onClose }: ODReportModa
                       {student.studentDepartment}
                     </td>
                     <td className="py-1.5 px-2.5 border-r border-slate-200 text-center text-slate-600">
-                      Yr {student.studentYear} ({student.studentSection})
+                      {student.studentYear} ({student.studentSection})
                     </td>
                     <td className="py-1.5 px-3 border-r border-slate-200 text-center font-mono text-[11px] text-slate-500">
                       {new Date(student.markedAt).toLocaleTimeString([], {

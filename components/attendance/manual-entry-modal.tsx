@@ -200,10 +200,10 @@ export default function ManualEntryModal({
                 onChange={(e) => setFormData({ ...formData, year: Number(e.target.value) })}
                 className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500"
               >
-                <option value={1}>1st</option>
-                <option value={2}>2nd</option>
-                <option value={3}>3rd</option>
-                <option value={4}>4th</option>
+                <option value={1}>1</option>
+                <option value={2}>2</option>
+                <option value={3}>3</option>
+                <option value={4}>4</option>
               </select>
             </div>
 

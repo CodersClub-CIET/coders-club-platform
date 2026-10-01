@@ -352,7 +352,7 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                     <td className="py-2.5 px-3">
                       {record.attendeeType === "student" ? (
                         <span className="text-slate-600 font-medium">
-                          {record.studentDepartment} &bull; Yr {record.studentYear} ({record.studentSection})
+                          {record.studentDepartment} &bull; {record.studentYear} ({record.studentSection})
                         </span>
                       ) : (
                         <div className="flex items-center gap-1.5 flex-wrap">

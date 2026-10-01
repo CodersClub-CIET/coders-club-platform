@@ -166,7 +166,7 @@ function ScanContent() {
         name: record.studentName || studentForm.studentName,
         identifier: record.studentRegNo || studentForm.studentRegNo,
         type: "student",
-        roleOrClass: `Year ${studentForm.year} (${studentForm.section.toUpperCase()})`,
+        roleOrClass: `${studentForm.year} (${studentForm.section.toUpperCase()})`,
         department: studentForm.department,
         markedAt: record.markedAt,
       });
@@ -476,10 +476,10 @@ function ScanContent() {
                       }
                       className="w-full px-2 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
                     >
-                      <option value={1}>1st</option>
-                      <option value={2}>2nd</option>
-                      <option value={3}>3rd</option>
-                      <option value={4}>4th</option>
+                      <option value={1}>1</option>
+                      <option value={2}>2</option>
+                      <option value={3}>3</option>
+                      <option value={4}>4</option>
                     </select>
                   </div>
 
