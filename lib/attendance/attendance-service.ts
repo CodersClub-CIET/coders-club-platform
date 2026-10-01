@@ -3,6 +3,7 @@ import {
   AttendanceSession,
   CreateSessionInput,
   HandshakeChallenge,
+  ManualAttendanceInput,
   QRTokenData,
   StudentAttendanceSubmission,
 } from "./types";
@@ -356,6 +357,141 @@ class AttendanceService {
     } catch {
       return () => {};
     }
+  }
+
+  /**
+   * Manually records attendance for a student (e.g., student phone battery dead, camera glitch, no network).
+   * Authorized for Admins and Associates with attendance permission.
+   * Enforces:
+   * 1. Registration number format validation
+   * 2. Duplicate prevention (one record per student per session context)
+   * 3. Sets verificationMethod: 'manual_entry' and marks audit metadata
+   */
+  async markManualAttendance(input: ManualAttendanceInput): Promise<AttendanceRecord> {
+    const session = await this.getSessionById(input.sessionId);
+    if (!session) {
+      throw new Error("Invalid session ID.");
+    }
+    if (!session.isActive) {
+      throw new Error("Cannot manually mark attendance for a closed session.");
+    }
+
+    if (!input.studentRegNo || input.studentRegNo.trim().length < 8) {
+      throw new Error("Please enter a valid Registration Number (8-12 digits).");
+    }
+
+    if (!input.studentName || input.studentName.trim().length < 2) {
+      throw new Error("Student name is required.");
+    }
+
+    // Duplicate check
+    const isDuplicate = checkDuplicateAttendance(this.records, {
+      studentRegNo: input.studentRegNo,
+    });
+
+    if (isDuplicate) {
+      throw new Error(
+        `Attendance for registration number ${input.studentRegNo} has already been recorded for this session.`
+      );
+    }
+
+    const newRecord: AttendanceRecord = {
+      id: `rec-manual-${Date.now()}`,
+      sessionId: input.sessionId,
+      studentRegNo: input.studentRegNo.trim().toUpperCase(),
+      studentName: input.studentName.trim(),
+      studentDepartment: input.department,
+      studentYear: input.year,
+      studentSection: input.section,
+      attendeeType: "student",
+      verificationMethod: "manual_entry",
+      status: "present",
+      markedBy: input.markedBy || "Coordinator (Manual)",
+      markedAt: new Date().toISOString(),
+    };
+
+    this.records.unshift(newRecord);
+    return newRecord;
+  }
+
+  /**
+   * Generates CSV string for attendance records in a session.
+   * Useful for college OD (On Duty) letters, faculty verification, and reporting.
+   */
+  async generateSessionAttendanceCSV(sessionId: string): Promise<string> {
+    const session = await this.getSessionById(sessionId);
+    const records = await this.getSessionRecords(sessionId);
+
+    const headers = [
+      "S.No",
+      "Registration Number",
+      "Student / Attendee Name",
+      "Attendee Type",
+      "Department",
+      "Year",
+      "Section",
+      "Status",
+      "Verification Method",
+      "Time Marked",
+      "Marked By",
+      "Event Name",
+      "Session Name",
+      "Period",
+    ];
+
+    const rows = records.map((r, index) => {
+      const regNo = r.studentRegNo || "N/A";
+      const name = r.studentName || r.associateName || "N/A";
+      const dept = r.studentDepartment || "Executive";
+      const year = r.studentYear ? `Yr ${r.studentYear}` : "N/A";
+      const section = r.studentSection || "N/A";
+      const time = new Date(r.markedAt).toLocaleString();
+      const method = r.verificationMethod === "qr_scan" ? "QR Scanned" : "Manual Entry";
+      const markedBy = r.markedBy || "Self (Scan)";
+
+      return [
+        index + 1,
+        `"${regNo}"`,
+        `"${name.replace(/"/g, '""')}"`,
+        `"${r.attendeeType}"`,
+        `"${dept}"`,
+        `"${year}"`,
+        `"${section}"`,
+        `"${r.status}"`,
+        `"${method}"`,
+        `"${time}"`,
+        `"${markedBy}"`,
+        `"${(session?.eventName || "").replace(/"/g, '""')}"`,
+        `"${(session?.sessionName || "").replace(/"/g, '""')}"`,
+        `"${session?.period || ""}"`,
+      ].join(",");
+    });
+
+    return [headers.join(","), ...rows].join("\n");
+  }
+
+  /**
+   * Triggers a browser download of the attendance CSV sheet.
+   */
+  async downloadSessionCSV(sessionId: string): Promise<void> {
+    const session = await this.getSessionById(sessionId);
+    const csvContent = await this.generateSessionAttendanceCSV(sessionId);
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    const cleanTitle = (session?.sessionName || "attendance")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "_");
+    const dateStr = new Date().toISOString().split("T")[0];
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${cleanTitle}_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 }
 

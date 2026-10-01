@@ -4,13 +4,16 @@ import React, { useEffect, useState } from "react";
 import { AttendanceRecord, AttendanceSession } from "@/lib/attendance/types";
 import { attendanceService } from "@/lib/attendance/attendance-service";
 import { Button } from "@/components/ui/button";
+import ManualEntryModal from "@/components/attendance/manual-entry-modal";
 import {
   Activity,
   CheckCircle2,
+  Download,
   GraduationCap,
   Radio,
   Search,
   UserCheck,
+  UserPlus,
   Users,
   X,
   Clock,
@@ -25,6 +28,8 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -54,6 +59,21 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
       unsubscribe();
     };
   }, [session.id]);
+
+  const handleExportCSV = async () => {
+    try {
+      setExporting(true);
+      await attendanceService.downloadSessionCSV(session.id);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to download attendance sheet.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleManualRecordCreated = (newRecord: AttendanceRecord) => {
+    setRecords((prev) => [newRecord, ...prev.filter((r) => r.id !== newRecord.id)]);
+  };
 
   // Derived counts
   const studentCount = records.filter((r) => r.attendeeType === "student").length;
@@ -92,13 +112,41 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-          >
-            <X className="size-5" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            {session.isActive && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setShowManualModal(true)}
+                className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold gap-1.5 shadow-sm"
+              >
+                <UserPlus className="size-3.5" />
+                Manual Entry
+              </Button>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              disabled={exporting || records.length === 0}
+              className="text-xs font-semibold text-slate-700 gap-1.5 border-slate-200 hover:bg-slate-100"
+              title="Download CSV for OD / College Records"
+            >
+              <Download className="size-3.5 text-indigo-600" />
+              {exporting ? "Exporting..." : "Export CSV"}
+            </Button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors ml-1"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
         </div>
 
         {/* Stats Row */}
@@ -165,8 +213,20 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
               </div>
               <p className="text-sm font-semibold text-slate-700">No attendance recorded yet</p>
               <p className="text-xs text-slate-400 mt-1">
-                Attendees will appear here in real time as they scan the QR code.
+                Attendees will appear here in real time as they scan the QR code or are added manually.
               </p>
+              {session.isActive && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowManualModal(true)}
+                  className="mt-3 text-xs text-amber-700 border-amber-200 hover:bg-amber-50"
+                >
+                  <UserPlus className="size-3.5 mr-1" />
+                  Add First Attendee Manually
+                </Button>
+              )}
             </div>
           ) : (
             <table className="w-full text-left text-xs border-collapse">
@@ -209,10 +269,24 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                     </td>
 
                     <td className="py-2.5 px-3">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                        <CheckCircle2 className="size-3 text-indigo-600" />
-                        {record.verificationMethod === "qr_scan" ? "QR Scanned" : "Manual"}
-                      </span>
+                      {record.verificationMethod === "manual_entry" ? (
+                        <div>
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                            <UserCheck className="size-3 text-amber-600" />
+                            Manual Entry
+                          </span>
+                          {record.markedBy && (
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              By {record.markedBy}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                          <CheckCircle2 className="size-3 text-indigo-600" />
+                          QR Scanned
+                        </span>
+                      )}
                     </td>
 
                     <td className="py-2.5 px-3">
@@ -239,12 +313,33 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end px-6 py-3 bg-slate-50 border-t border-slate-100 shrink-0">
+        <div className="flex items-center justify-between px-6 py-3 bg-slate-50 border-t border-slate-100 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            disabled={exporting || records.length === 0}
+            className="text-xs text-slate-700 gap-1.5"
+          >
+            <Download className="size-3.5" />
+            Download OD Sheet (.csv)
+          </Button>
+
           <Button variant="outline" size="sm" onClick={onClose}>
             Close Monitor
           </Button>
         </div>
       </div>
+
+      {/* Manual Attendance Entry Modal */}
+      {showManualModal && (
+        <ManualEntryModal
+          session={session}
+          onClose={() => setShowManualModal(false)}
+          onRecordCreated={handleManualRecordCreated}
+        />
+      )}
     </div>
   );
 }

@@ -87,6 +87,17 @@ export interface AssociateAttendanceSubmission {
   associateName: string;
 }
 
+export interface ManualAttendanceInput {
+  sessionId: string;
+  studentRegNo: string;
+  studentName: string;
+  department: string;
+  year: number;
+  section: string;
+  reason?: string;
+  markedBy?: string;
+}
+
 export interface AttendanceValidationResult {
   isValid: boolean;
   errors: string[];

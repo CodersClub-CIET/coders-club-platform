@@ -14,6 +14,7 @@ import {
   Calendar,
   CheckCircle,
   Clock,
+  Download,
   Plus,
   QrCode,
   Radio,
@@ -63,6 +64,14 @@ export default function AttendanceManagementPage() {
       setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to end session.");
+    }
+  };
+
+  const handleDownloadCSV = async (sessionId: string) => {
+    try {
+      await attendanceService.downloadSessionCSV(sessionId);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to download attendance sheet.");
     }
   };
 
@@ -329,6 +338,18 @@ export default function AttendanceManagementPage() {
                     >
                       <Users className="size-3.5" />
                       Live Feed
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadCSV(session.id)}
+                      className="text-xs font-medium text-slate-700 gap-1.5"
+                      title="Download CSV attendance sheet for OD / college records"
+                    >
+                      <Download className="size-3.5 text-indigo-600" />
+                      CSV
                     </Button>
                   </div>
 
