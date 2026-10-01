@@ -593,17 +593,18 @@ function ScanContent() {
             )}
           </div>
         )}
-      </div>
 
-      {/* Footer Info */}
-      <div className="mt-4 text-center text-[11px] text-slate-500 flex flex-col items-center gap-0.5">
-        <div className="flex items-center gap-1.5 text-slate-400 font-medium">
-          <GraduationCap className="size-3.5 text-indigo-400" />
-          <span>Coimbatore Institute of Engineering and Technology</span>
+        {/* Footer Info inside the card box */}
+        <div className="mt-6 pt-4 border-t border-slate-700/60 text-center text-[11px] text-slate-400 flex flex-col items-center gap-0.5">
+          <div className="flex items-center gap-1.5 text-slate-300 font-medium">
+            <GraduationCap className="size-3.5 text-indigo-400" />
+            <span>Coimbatore Institute of Engineering and Technology</span>
+          </div>
+          <span className="text-[10px] text-slate-400">
+            Narasipuram (P.O), Thondamuthur (Via), Vellimalaipattinam, Coimbatore - 641109
+          </span>
+          <span className="text-[10px] text-indigo-400/80 font-mono">Ph: +91 422-2970703</span>
         </div>
-        <span className="text-[10px] text-slate-500">
-          Narasipuram (P.O), Thondamuthur (Via), Vellimalaipattinam, Coimbatore - 641109
-        </span>
       </div>
     </div>
   );

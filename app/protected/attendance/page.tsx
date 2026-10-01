@@ -446,13 +446,13 @@ export default function AttendanceManagementPage() {
         />
       )}
 
-      {/* Official CIET Footer */}
-      <footer className="max-w-7xl mx-auto mt-12 pt-6 border-t border-slate-200 text-center text-xs text-slate-500">
-        <p className="font-semibold text-slate-700">Coimbatore Institute of Engineering and Technology</p>
-        <p className="text-[11px] text-slate-500 mt-0.5">
+      {/* Official CIET Footer Box */}
+      <footer className="max-w-7xl mx-auto mt-10 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm text-center text-xs text-slate-500">
+        <p className="font-semibold text-slate-800 text-sm">Coimbatore Institute of Engineering and Technology</p>
+        <p className="text-xs text-slate-600 mt-1">
           Narasipuram (P.O), Thondamuthur (Via), Vellimalaipattinam, Coimbatore - 641109, Tamil Nadu &bull; Ph: +91 422-2970703
         </p>
-        <p className="text-[10px] text-slate-400 mt-1">
+        <p className="text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-100">
           Coders Club Platform &bull; Autonomous Institution Approved by AICTE, Affiliated to Anna University
         </p>
       </footer>
