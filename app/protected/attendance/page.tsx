@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { AttendanceSession } from "@/lib/attendance/types";
 import { attendanceService } from "@/lib/attendance/attendance-service";
 import { Button } from "@/components/ui/button";
@@ -10,13 +11,18 @@ import QRDisplayModal from "@/components/attendance/qr-display-modal";
 import LiveMonitorModal from "@/components/attendance/live-monitor-modal";
 import CreateSessionModal from "@/components/attendance/create-session-modal";
 import ODReportModal from "@/components/attendance/od-report-modal";
+import AttendanceAnalyticsView from "@/components/attendance/attendance-analytics-view";
+import StudentLookupView from "@/components/attendance/student-lookup-view";
 import {
   Activity,
+  BarChart3,
   Calendar,
   CheckCircle,
   Clock,
   Download,
   FileText,
+  GraduationCap,
+  Home as HomeIcon,
   Plus,
   QrCode,
   Radio,
@@ -25,10 +31,12 @@ import {
   Sun,
   Moon,
   Trash2,
+  UserCheck,
   Users,
 } from "lucide-react";
 
 export default function AttendanceManagementPage() {
+  const [activeTab, setActiveTab] = useState<"sessions" | "analytics" | "lookup">("sessions");
   const [sessions, setSessions] = useState<AttendanceSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -111,44 +119,142 @@ export default function AttendanceManagementPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
-      {/* Top Banner */}
-      <div className="max-w-7xl mx-auto mb-6">
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-200 border border-indigo-400/30 backdrop-blur-sm">
-                  <Activity className="size-3 text-indigo-300" />
-                  Attendance Module
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
+      <div>
+        {/* Top Global Navigation Bar */}
+        <header className="border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-30 mb-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-indigo-600 text-white shadow-sm">
+                <QrCode className="size-5" />
+              </div>
+              <div>
+                <span className="font-extrabold text-sm tracking-tight text-slate-900 block">
+                  Coders Club CIET
                 </span>
-                <span className="text-xs text-indigo-300 font-mono">v1.0.0</span>
-                <span className="text-xs text-indigo-200/80 font-medium hidden md:inline">
-                  &bull; Coimbatore Institute of Engineering and Technology
+                <span className="text-[10px] text-slate-500 block -mt-0.5">
+                  Autonomous Institution &bull; Anna University
                 </span>
               </div>
-              <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white">
-                Attendance Management
-              </h1>
-              <p className="mt-2 text-sm sm:text-base text-indigo-200 max-w-2xl">
-                Manage event attendance sessions, generate server-authoritative QR codes, and monitor realtime student and associate participation.
-              </p>
             </div>
 
-            <Button
-              type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg transition-all flex items-center gap-2"
-            >
-              <Plus className="size-4" />
-              Start New Session
-            </Button>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link
+                href="/"
+                className="text-xs font-semibold text-slate-600 hover:text-indigo-600 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <HomeIcon className="size-3.5" />
+                <span>Home</span>
+              </Link>
+              <Link
+                href="/attendance"
+                className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <Activity className="size-3.5" />
+                <span>Attendance</span>
+              </Link>
+              <Link
+                href="/scores"
+                className="text-xs font-semibold text-slate-600 hover:text-indigo-600 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <FileText className="size-3.5" />
+                <span>Score Board</span>
+              </Link>
+              <Link
+                href="/attendance/scan"
+                className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors border border-emerald-200"
+              >
+                <QrCode className="size-3.5" />
+                <span>Student Scan</span>
+              </Link>
+            </div>
           </div>
-        </div>
-      </div>
+        </header>
 
-      {/* Metrics Row */}
-      <div className="max-w-7xl mx-auto mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Content Container */}
+        <div className="px-4 sm:px-6 lg:px-8 pb-10">
+          {/* Top Banner */}
+          <div className="max-w-7xl mx-auto mb-6">
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-200 border border-indigo-400/30 backdrop-blur-sm">
+                      <Activity className="size-3 text-indigo-300" />
+                      Attendance Suite
+                    </span>
+                    <span className="text-xs text-indigo-300 font-mono">v1.1.0</span>
+                    <span className="text-xs text-indigo-200/80 font-medium hidden md:inline">
+                      &bull; Coimbatore Institute of Engineering and Technology
+                    </span>
+                  </div>
+                  <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white">
+                    Attendance Management
+                  </h1>
+                  <p className="mt-2 text-sm sm:text-base text-indigo-200 max-w-2xl">
+                    Manage event attendance sessions, generate server-authoritative QR codes, and monitor realtime student and associate participation.
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg transition-all flex items-center gap-2"
+                >
+                  <Plus className="size-4" />
+                  Start New Session
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Modern Navigation Tabs */}
+          <div className="max-w-7xl mx-auto mb-6 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
+            <button
+              type="button"
+              onClick={() => setActiveTab("sessions")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeTab === "sessions"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <Calendar className="size-3.5" />
+              <span>Sessions ({sessions.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("analytics")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeTab === "analytics"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <BarChart3 className="size-3.5" />
+              <span>Analytics & Department Insights</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("lookup")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeTab === "lookup"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <UserCheck className="size-3.5" />
+              <span>Student Verification & OD</span>
+            </button>
+          </div>
+
+          {/* Conditional Views */}
+          {activeTab === "sessions" && (
+            <>
+              {/* Metrics Row */}
+              <div className="max-w-7xl mx-auto mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
           <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
             <Radio className="size-6 animate-pulse" />
@@ -420,6 +526,22 @@ export default function AttendanceManagementPage() {
           </div>
         )}
       </div>
+    </>
+  )}
+
+  {activeTab === "analytics" && (
+    <div className="max-w-7xl mx-auto">
+      <AttendanceAnalyticsView />
+    </div>
+  )}
+
+  {activeTab === "lookup" && (
+    <div className="max-w-7xl mx-auto">
+      <StudentLookupView />
+    </div>
+  )}
+</div>
+</div>
 
       {/* QR Display Modal */}
       {activeQRModalSession && (

@@ -119,11 +119,44 @@ export interface AttendanceValidationResult {
   errors: string[];
 }
 
-export interface AttendanceStats {
+export interface SessionAttendanceStats {
   totalCount: number;
   studentCount: number;
   associateCount: number;
   period: AttendancePeriod;
   sessionName: string;
   eventName: string;
+}
+
+export type AttendanceStats = SessionAttendanceStats;
+
+export interface PlatformAttendanceAnalytics {
+  totalRecords: number;
+  distinctStudents: number;
+  distinctAssociates: number;
+  totalSessions: number;
+  activeSessions: number;
+  departmentCounts: Record<string, number>;
+  yearCounts: Record<number, number>;
+  periodCounts: { morning: number; afternoon: number };
+}
+
+export interface StudentAttendanceSummary {
+  studentRegNo: string;
+  studentName: string;
+  department: string;
+  year: number;
+  section: string;
+  sessionsAttended: number;
+  totalSessions: number;
+  attendanceRate: number;
+  history: {
+    sessionId: string;
+    sessionName: string;
+    eventName: string;
+    period: AttendancePeriod;
+    markedAt: string;
+    status: AttendanceStatus;
+    verificationMethod: VerificationMethod;
+  }[];
 }

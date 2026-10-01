@@ -6,8 +6,10 @@ import {
   CreateSessionInput,
   HandshakeChallenge,
   ManualAttendanceInput,
+  PlatformAttendanceAnalytics,
   QRTokenData,
   StudentAttendanceSubmission,
+  StudentAttendanceSummary,
 } from "./types";
 import { checkDuplicateAttendance, validateStudentSubmission } from "./validation";
 
@@ -843,6 +845,239 @@ class AttendanceService {
 
     link.setAttribute("href", url);
     link.setAttribute("download", `${cleanTitle}_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Retrieves all attendance records across all sessions.
+   */
+  async getAllRecords(): Promise<AttendanceRecord[]> {
+    return this.getStoredRecords();
+  }
+
+  /**
+   * Calculates platform-wide attendance analytics.
+   */
+  async getPlatformAnalytics(): Promise<PlatformAttendanceAnalytics> {
+    const sessions = await this.getSessions();
+    const records = await this.getAllRecords();
+
+    const distinctStudents = new Set(
+      records
+        .filter((r) => r.attendeeType === "student" && r.studentRegNo)
+        .map((r) => r.studentRegNo)
+    ).size;
+
+    const distinctAssociates = new Set(
+      records
+        .filter((r) => r.attendeeType === "associate" && r.associateUserId)
+        .map((r) => r.associateUserId)
+    ).size;
+
+    const departmentCounts: Record<string, number> = {};
+    const yearCounts: Record<number, number> = {};
+    const periodCounts = { morning: 0, afternoon: 0 };
+
+    const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+
+    records.forEach((r) => {
+      const dept = r.studentDepartment || "Executive / Associate";
+      departmentCounts[dept] = (departmentCounts[dept] || 0) + 1;
+
+      if (r.studentYear) {
+        yearCounts[r.studentYear] = (yearCounts[r.studentYear] || 0) + 1;
+      }
+
+      const session = sessionMap.get(r.sessionId);
+      if (session) {
+        if (session.period === "morning") periodCounts.morning++;
+        else if (session.period === "afternoon") periodCounts.afternoon++;
+      }
+    });
+
+    return {
+      totalRecords: records.length,
+      distinctStudents,
+      distinctAssociates,
+      totalSessions: sessions.length,
+      activeSessions: sessions.filter((s) => s.isActive).length,
+      departmentCounts,
+      yearCounts,
+      periodCounts,
+    };
+  }
+
+  /**
+   * Searches and builds student attendance history and OD eligibility summary.
+   */
+  async searchStudentAttendance(query: string): Promise<StudentAttendanceSummary[]> {
+    const sessions = await this.getSessions();
+    const records = await this.getAllRecords();
+    const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+
+    const cleanQuery = query.trim().toLowerCase();
+
+    const studentMap = new Map<
+      string,
+      {
+        regNo: string;
+        name: string;
+        department: string;
+        year: number;
+        section: string;
+        records: AttendanceRecord[];
+      }
+    >();
+
+    records
+      .filter((r) => r.attendeeType === "student" && r.studentRegNo)
+      .forEach((r) => {
+        const regNo = r.studentRegNo!;
+        if (!studentMap.has(regNo)) {
+          studentMap.set(regNo, {
+            regNo,
+            name: r.studentName || "N/A",
+            department: r.studentDepartment || "N/A",
+            year: r.studentYear || 0,
+            section: r.studentSection || "A",
+            records: [],
+          });
+        }
+        studentMap.get(regNo)!.records.push(r);
+      });
+
+    const totalSessions = sessions.length || 1;
+    const summaries: StudentAttendanceSummary[] = [];
+
+    studentMap.forEach((student) => {
+      const matches =
+        !cleanQuery ||
+        student.regNo.toLowerCase().includes(cleanQuery) ||
+        student.name.toLowerCase().includes(cleanQuery) ||
+        student.department.toLowerCase().includes(cleanQuery);
+
+      if (matches) {
+        const history = student.records.map((r) => {
+          const s = sessionMap.get(r.sessionId);
+          return {
+            sessionId: r.sessionId,
+            sessionName: s?.sessionName || "Unknown Session",
+            eventName: s?.eventName || "Event",
+            period: s?.period || "morning",
+            markedAt: r.markedAt,
+            status: r.status,
+            verificationMethod: r.verificationMethod,
+          };
+        });
+
+        const rate = Math.round((history.length / totalSessions) * 100);
+
+        summaries.push({
+          studentRegNo: student.regNo,
+          studentName: student.name,
+          department: student.department,
+          year: student.year,
+          section: student.section,
+          sessionsAttended: history.length,
+          totalSessions,
+          attendanceRate: Math.min(100, rate),
+          history,
+        });
+      }
+    });
+
+    return summaries.sort((a, b) => b.sessionsAttended - a.sessionsAttended);
+  }
+
+  /**
+   * Generates a Master Consolidated Attendance CSV spanning all sessions.
+   */
+  async generateMasterAttendanceCSV(): Promise<string> {
+    const sessions = await this.getSessions();
+    const records = await this.getAllRecords();
+
+    const studentMap = new Map<
+      string,
+      {
+        regNo: string;
+        name: string;
+        dept: string;
+        year: number | string;
+        section: string;
+        attendedSessions: Set<string>;
+      }
+    >();
+
+    records
+      .filter((r) => r.attendeeType === "student" && r.studentRegNo)
+      .forEach((r) => {
+        const regNo = r.studentRegNo!;
+        if (!studentMap.has(regNo)) {
+          studentMap.set(regNo, {
+            regNo,
+            name: r.studentName || "N/A",
+            dept: r.studentDepartment || "N/A",
+            year: r.studentYear || "N/A",
+            section: r.studentSection || "N/A",
+            attendedSessions: new Set(),
+          });
+        }
+        studentMap.get(regNo)!.attendedSessions.add(r.sessionId);
+      });
+
+    const headers = [
+      "S.No",
+      "Registration Number",
+      "Student Name",
+      "Department",
+      "Year",
+      "Section",
+      ...sessions.map((s) => `"${s.sessionName.replace(/"/g, '""')} (${s.period})"`),
+      "Total Attended",
+      "Attendance %",
+      "OD Eligible",
+    ];
+
+    const rows = Array.from(studentMap.values()).map((student, idx) => {
+      const sessionAttendanceCols = sessions.map((s) =>
+        student.attendedSessions.has(s.id) ? "P" : "A"
+      );
+      const attendedCount = student.attendedSessions.size;
+      const rate = sessions.length > 0 ? Math.round((attendedCount / sessions.length) * 100) : 0;
+      const odEligible = rate >= 75 ? "YES" : "NO";
+
+      return [
+        idx + 1,
+        `"${student.regNo}"`,
+        `"${student.name.replace(/"/g, '""')}"`,
+        `"${student.dept}"`,
+        `"${student.year}"`,
+        `"${student.section}"`,
+        ...sessionAttendanceCols,
+        attendedCount,
+        `${rate}%`,
+        `"${odEligible}"`,
+      ].join(",");
+    });
+
+    return [headers.join(","), ...rows].join("\n");
+  }
+
+  /**
+   * Downloads the master consolidated CSV sheet.
+   */
+  async downloadMasterAttendanceCSV(): Promise<void> {
+    const csvContent = await this.generateMasterAttendanceCSV();
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    const dateStr = new Date().toISOString().split("T")[0];
+    link.setAttribute("href", url);
+    link.setAttribute("download", `ciet_coders_club_master_attendance_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
