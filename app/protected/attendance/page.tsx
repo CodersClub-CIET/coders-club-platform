@@ -110,6 +110,9 @@ export default function AttendanceManagementPage() {
                   Attendance Module
                 </span>
                 <span className="text-xs text-indigo-300 font-mono">v1.0.0</span>
+                <span className="text-xs text-indigo-200/80 font-medium hidden md:inline">
+                  &bull; Coimbatore Institute of Engineering and Technology
+                </span>
               </div>
               <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white">
                 Attendance Management
@@ -418,6 +421,17 @@ export default function AttendanceManagementPage() {
           onCreated={handleSessionCreated}
         />
       )}
+
+      {/* Official CIET Footer */}
+      <footer className="max-w-7xl mx-auto mt-12 pt-6 border-t border-slate-200 text-center text-xs text-slate-500">
+        <p className="font-semibold text-slate-700">Coimbatore Institute of Engineering and Technology</p>
+        <p className="text-[11px] text-slate-500 mt-0.5">
+          Narasipuram (P.O), Thondamuthur (Via), Vellimalaipattinam, Coimbatore - 641109, Tamil Nadu &bull; Ph: +91 422-2970703
+        </p>
+        <p className="text-[10px] text-slate-400 mt-1">
+          Coders Club Platform &bull; Autonomous Institution Approved by AICTE, Affiliated to Anna University
+        </p>
+      </footer>
     </div>
   );
 }

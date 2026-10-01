@@ -148,8 +148,8 @@ export default function ODReportModal({ session, isOpen, onClose }: ODReportModa
             <p className="text-xs text-slate-600 font-sans mt-0.5 uppercase tracking-wider">
               (Autonomous Institution | Approved by AICTE, New Delhi & Affiliated to Anna University, Chennai)
             </p>
-            <p className="text-xs text-slate-500 font-sans">
-              Vellimalaipattinam, Narasimhanaickenpalayam, Coimbatore, Tamil Nadu 641109
+            <p className="text-xs text-slate-500 font-sans mt-0.5">
+              Narasipuram (P.O), Thondamuthur (Via), Vellimalaipattinam, Coimbatore - 641109, Tamil Nadu &bull; Ph: +91 422-2970703
             </p>
             <div className="inline-block mt-3 px-4 py-1 rounded bg-slate-100 border border-slate-300">
               <span className="text-xs sm:text-sm font-bold uppercase tracking-widest font-sans text-indigo-900">
