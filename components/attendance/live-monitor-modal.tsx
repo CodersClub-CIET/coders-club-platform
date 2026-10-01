@@ -32,6 +32,7 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [attendeeFilter, setAttendeeFilter] = useState<"all" | "student" | "associate">("all");
   const [showManualModal, setShowManualModal] = useState(false);
   const [showODModal, setShowODModal] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -135,12 +136,14 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
   const associateCount = records.filter((r) => r.attendeeType === "associate").length;
 
   const filteredRecords = records.filter((r) => {
+    if (attendeeFilter !== "all" && r.attendeeType !== attendeeFilter) return false;
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
       r.studentRegNo?.toLowerCase().includes(query) ||
       r.studentName?.toLowerCase().includes(query) ||
       r.associateName?.toLowerCase().includes(query) ||
+      r.associateUserId?.toLowerCase().includes(query) ||
       r.studentDepartment?.toLowerCase().includes(query)
     );
   });
@@ -270,20 +273,59 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
           </div>
         )}
 
-        {/* Search Bar */}
-        <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
-          <div className="relative w-72">
-            <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search Reg No, Name, Dept..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-            />
+        {/* Search & Filter Bar */}
+        <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search Reg No, Name, Dept..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setAttendeeFilter("all")}
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
+                  attendeeFilter === "all"
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                All ({records.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setAttendeeFilter("student")}
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
+                  attendeeFilter === "student"
+                    ? "bg-indigo-600 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Participants ({studentCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setAttendeeFilter("associate")}
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
+                  attendeeFilter === "associate"
+                    ? "bg-purple-600 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Coordinators ({associateCount})
+              </button>
+            </div>
           </div>
+
           <div className="text-xs text-slate-400 font-mono">
-            Showing {filteredRecords.length} of {records.length} records
+            Showing {filteredRecords.length} records
           </div>
         </div>
 

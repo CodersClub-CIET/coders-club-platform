@@ -3,6 +3,7 @@ import {
   AttendanceSession,
   AttendanceStatus,
   AssociateAttendanceSubmission,
+  CoordinatorAttendanceInput,
   CreateSessionInput,
   HandshakeChallenge,
   ManualAttendanceInput,
@@ -93,6 +94,59 @@ const MOCK_RECORDS: AttendanceRecord[] = [
 class AttendanceService {
   // In-memory fallback for challenge tokens
   private activeChallenges: Map<string, { sessionId: string; expiresAt: number; consumed: boolean }> = new Map();
+
+  /**
+   * Checks whether Supabase is configured with valid environment variables.
+   */
+  private isSupabaseConfigured(): boolean {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    return !!(url && key && !url.includes("placeholder") && !key.includes("placeholder"));
+  }
+
+  /**
+   * Checks database directly for existing record to prevent duplicate student and coordinator submissions.
+   */
+  async checkDuplicateInDatabase(
+    sessionId: string,
+    identifier: { studentRegNo?: string; associateUserId?: string }
+  ): Promise<boolean> {
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+
+        let query = supabase
+          .from("attendance_records")
+          .select("id")
+          .eq("session_id", sessionId);
+
+        if (identifier.studentRegNo) {
+          query = query
+            .eq("attendee_type", "student")
+            .ilike("student_reg_no", identifier.studentRegNo.trim());
+        } else if (identifier.associateUserId) {
+          query = query
+            .eq("attendee_type", "associate")
+            .ilike("associate_user_id", identifier.associateUserId.trim());
+        }
+
+        const { data, error } = await query.limit(1);
+        if (!error && data && data.length > 0) {
+          return true;
+        }
+      } catch (err) {
+        console.warn("Database duplicate check fallback to local records:", err);
+      }
+    }
+
+    // Always check in local records cache as well
+    const records = this.getStoredRecords();
+    return checkDuplicateAttendance(records, {
+      ...identifier,
+      sessionId,
+    });
+  }
 
   /**
    * Reads persistent sessions with fallback to default mock sessions.
@@ -423,14 +477,14 @@ class AttendanceService {
     challenge.consumed = true;
     this.saveChallenge(submission.challengeToken, challenge);
 
-    const records = this.getStoredRecords();
-    const isDuplicate = checkDuplicateAttendance(records, {
+    // 1. Strict duplicate check against both Database and Local Cache!
+    const isDuplicate = await this.checkDuplicateInDatabase(challenge.sessionId, {
       studentRegNo: submission.studentRegNo,
     });
 
     if (isDuplicate) {
       throw new Error(
-        `Attendance for registration number ${submission.studentRegNo} has already been recorded for this session.`
+        `Duplicate Check-in: Attendance for registration number ${submission.studentRegNo.trim().toUpperCase()} has already been recorded for this session.`
       );
     }
 
@@ -448,8 +502,31 @@ class AttendanceService {
       markedAt: new Date().toISOString(),
     };
 
+    const records = this.getStoredRecords();
     const updatedRecords = [newRecord, ...records];
     this.saveStoredRecords(updatedRecords);
+
+    // Persist to Supabase Database if configured
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        await supabase.from("attendance_records").insert({
+          session_id: challenge.sessionId,
+          student_reg_no: newRecord.studentRegNo,
+          student_name: newRecord.studentName,
+          student_department: newRecord.studentDepartment,
+          student_year: newRecord.studentYear,
+          student_section: newRecord.studentSection,
+          attendee_type: "student",
+          verification_method: "qr_scan",
+          status: "present",
+          marked_at: newRecord.markedAt,
+        });
+      } catch (err) {
+        console.warn("Supabase student record insert fallback to local storage:", err);
+      }
+    }
 
     // Broadcast across all open tabs, windows, and in-tab listeners!
     this.broadcastEvent({
@@ -462,11 +539,11 @@ class AttendanceService {
   }
 
   /**
-   * Submits Associate attendance.
+   * Submits Associate / Coordinator attendance from QR scan.
    * Enforces:
    * 1. Anti-replay challenge verification
    * 2. Single-use consumption
-   * 3. Duplicate prevention: one record per associate per session
+   * 3. Strict duplicate prevention against DB and local state
    * 4. Multi-tab and multi-window Realtime broadcast
    */
   async submitAssociateAttendance(submission: AssociateAttendanceSubmission): Promise<AttendanceRecord> {
@@ -494,14 +571,14 @@ class AttendanceService {
     challenge.consumed = true;
     this.saveChallenge(submission.challengeToken, challenge);
 
-    const records = this.getStoredRecords();
-    const isDuplicate = checkDuplicateAttendance(records, {
+    // Strict duplicate check against both Database and Local Cache!
+    const isDuplicate = await this.checkDuplicateInDatabase(challenge.sessionId, {
       associateUserId: submission.associateUserId,
     });
 
     if (isDuplicate) {
       throw new Error(
-        `Attendance for associate ${submission.associateName} (${submission.associateUserId}) has already been recorded for this session.`
+        `Duplicate Check-in: Attendance for coordinator ${submission.associateName} (${submission.associateUserId.trim().toUpperCase()}) has already been recorded for this session.`
       );
     }
 
@@ -518,12 +595,113 @@ class AttendanceService {
       markedAt: new Date().toISOString(),
     };
 
+    const records = this.getStoredRecords();
     const updatedRecords = [newRecord, ...records];
     this.saveStoredRecords(updatedRecords);
+
+    // Persist to Supabase Database if configured
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        await supabase.from("attendance_records").insert({
+          session_id: challenge.sessionId,
+          associate_user_id: newRecord.associateUserId,
+          student_name: newRecord.associateName,
+          student_department: newRecord.studentDepartment,
+          attendee_type: "associate",
+          verification_method: "qr_scan",
+          status: "present",
+          marked_by: newRecord.markedBy,
+          marked_at: newRecord.markedAt,
+        });
+      } catch (err) {
+        console.warn("Supabase coordinator insert fallback to local storage:", err);
+      }
+    }
 
     this.broadcastEvent({
       type: "NEW_RECORD",
       sessionId: challenge.sessionId,
+      record: newRecord,
+    });
+
+    return newRecord;
+  }
+
+  /**
+   * Manually records attendance for an event coordinator or club executive.
+   * Enforces duplicate prevention against both database and local state.
+   */
+  async markCoordinatorAttendance(input: CoordinatorAttendanceInput): Promise<AttendanceRecord> {
+    const session = await this.getSessionById(input.sessionId);
+    if (!session) {
+      throw new Error("Invalid session ID.");
+    }
+    if (!session.isActive) {
+      throw new Error("Cannot mark attendance for a closed session.");
+    }
+
+    if (!input.coordinatorId || input.coordinatorId.trim().length < 3) {
+      throw new Error("Coordinator ID or Roll Number is required (min 3 characters).");
+    }
+
+    if (!input.coordinatorName || input.coordinatorName.trim().length < 2) {
+      throw new Error("Coordinator full name is required.");
+    }
+
+    // Check duplicate against both database and local records
+    const isDuplicate = await this.checkDuplicateInDatabase(input.sessionId, {
+      associateUserId: input.coordinatorId,
+    });
+
+    if (isDuplicate) {
+      throw new Error(
+        `Duplicate Check-in: Coordinator "${input.coordinatorName}" (${input.coordinatorId.trim().toUpperCase()}) has already recorded attendance for this session.`
+      );
+    }
+
+    const newRecord: AttendanceRecord = {
+      id: `rec-coord-${Date.now()}`,
+      sessionId: input.sessionId,
+      associateUserId: input.coordinatorId.trim().toUpperCase(),
+      associateName: input.coordinatorName.trim(),
+      studentDepartment: input.department || "Executive",
+      attendeeType: "associate",
+      verificationMethod: "manual_entry",
+      status: "present",
+      markedBy: input.markedBy || `${input.role || "Coordinator"} (Coordinator Desk)`,
+      markedAt: new Date().toISOString(),
+    };
+
+    const records = this.getStoredRecords();
+    const updatedRecords = [newRecord, ...records];
+    this.saveStoredRecords(updatedRecords);
+
+    // Persist to Supabase Database if configured
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        await supabase.from("attendance_records").insert({
+          session_id: input.sessionId,
+          associate_user_id: newRecord.associateUserId,
+          student_name: newRecord.associateName,
+          student_department: newRecord.studentDepartment,
+          attendee_type: "associate",
+          verification_method: "manual_entry",
+          status: "present",
+          marked_by: newRecord.markedBy,
+          marked_at: newRecord.markedAt,
+        });
+      } catch (err) {
+        console.warn("Supabase coordinator manual insert error:", err);
+      }
+    }
+
+    this.broadcastEvent({
+      type: "NEW_RECORD",
+      sessionId: input.sessionId,
       record: newRecord,
     });
 
@@ -550,14 +728,14 @@ class AttendanceService {
       throw new Error("Student name is required.");
     }
 
-    const records = this.getStoredRecords();
-    const isDuplicate = checkDuplicateAttendance(records, {
+    // Check duplicate against both Database and local storage
+    const isDuplicate = await this.checkDuplicateInDatabase(input.sessionId, {
       studentRegNo: input.studentRegNo,
     });
 
     if (isDuplicate) {
       throw new Error(
-        `Attendance for registration number ${input.studentRegNo} has already been recorded for this session.`
+        `Duplicate Check-in: Attendance for registration number ${input.studentRegNo.trim().toUpperCase()} has already been recorded for this session.`
       );
     }
 
@@ -576,8 +754,32 @@ class AttendanceService {
       markedAt: new Date().toISOString(),
     };
 
+    const records = this.getStoredRecords();
     const updatedRecords = [newRecord, ...records];
     this.saveStoredRecords(updatedRecords);
+
+    // Persist to Supabase Database if configured
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        await supabase.from("attendance_records").insert({
+          session_id: input.sessionId,
+          student_reg_no: newRecord.studentRegNo,
+          student_name: newRecord.studentName,
+          student_department: newRecord.studentDepartment,
+          student_year: newRecord.studentYear,
+          student_section: newRecord.studentSection,
+          attendee_type: "student",
+          verification_method: "manual_entry",
+          status: "present",
+          marked_by: newRecord.markedBy,
+          marked_at: newRecord.markedAt,
+        });
+      } catch (err) {
+        console.warn("Supabase student manual insert error:", err);
+      }
+    }
 
     this.broadcastEvent({
       type: "NEW_RECORD",
@@ -590,8 +792,58 @@ class AttendanceService {
 
   /**
    * Retrieves all attendance records for a given session.
+   * Directly queries Supabase Database when configured, with seamless local storage sync.
    */
   async getSessionRecords(sessionId: string): Promise<AttendanceRecord[]> {
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("attendance_records")
+          .select("*")
+          .eq("session_id", sessionId)
+          .order("marked_at", { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          const dbRecords: AttendanceRecord[] = data.map((d: Record<string, unknown>) => ({
+            id: String(d.id),
+            sessionId: String(d.session_id),
+            studentRegNo: d.student_reg_no ? String(d.student_reg_no) : undefined,
+            studentName: d.student_name ? String(d.student_name) : undefined,
+            studentDepartment: d.student_department ? String(d.student_department) : undefined,
+            studentYear: d.student_year ? Number(d.student_year) : undefined,
+            studentSection: d.student_section ? String(d.student_section) : undefined,
+            associateUserId: d.associate_user_id ? String(d.associate_user_id) : undefined,
+            associateName: d.student_name ? String(d.student_name) : undefined,
+            attendeeType: (d.attendee_type as "student" | "associate") || "student",
+            verificationMethod: (d.verification_method as "qr_scan" | "manual_entry") || "qr_scan",
+            status: (d.status as AttendanceStatus) || "present",
+            markedBy: d.marked_by ? String(d.marked_by) : undefined,
+            markedAt: String(d.marked_at || new Date().toISOString()),
+          }));
+
+          // Merge local cache for records created in-session
+          const localRecords = this.getStoredRecords().filter((r) => r.sessionId === sessionId);
+          const merged = [...dbRecords];
+          localRecords.forEach((local) => {
+            const exists = merged.some(
+              (m) =>
+                m.id === local.id ||
+                (local.studentRegNo && m.studentRegNo === local.studentRegNo) ||
+                (local.associateUserId && m.associateUserId === local.associateUserId)
+            );
+            if (!exists) {
+              merged.push(local);
+            }
+          });
+          return merged;
+        }
+      } catch (err) {
+        console.warn("Could not fetch session records from DB, falling back to local records:", err);
+      }
+    }
+
     const records = this.getStoredRecords();
     return records.filter((r) => r.sessionId === sessionId);
   }
@@ -1078,6 +1330,88 @@ class AttendanceService {
     const dateStr = new Date().toISOString().split("T")[0];
     link.setAttribute("href", url);
     link.setAttribute("download", `ciet_coders_club_master_attendance_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Retrieves coordinator / associate attendance records across sessions or for a specific session.
+   */
+  async getCoordinatorRecords(sessionId?: string): Promise<AttendanceRecord[]> {
+    const allRecords = await this.getAllRecords();
+    return allRecords.filter(
+      (r) =>
+        r.attendeeType === "associate" &&
+        (!sessionId || r.sessionId === sessionId)
+    );
+  }
+
+  /**
+   * Generates a CSV sheet specifically for Coordinator & Associate attendance.
+   */
+  async generateCoordinatorAttendanceCSV(sessionId?: string): Promise<string> {
+    const sessions = await this.getSessions();
+    const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+    const records = await this.getCoordinatorRecords(sessionId);
+
+    const headers = [
+      "S.No",
+      "Coordinator ID / Reg No",
+      "Coordinator Name",
+      "Department",
+      "Role / Designation",
+      "Event Name",
+      "Session Name",
+      "Period",
+      "Verification Method",
+      "Time Marked",
+      "Status",
+    ];
+
+    const rows = records.map((r, index) => {
+      const session = sessionMap.get(r.sessionId);
+      const coordId = r.associateUserId || "N/A";
+      const name = r.associateName || r.studentName || "N/A";
+      const dept = r.studentDepartment || "Executive";
+      const role = r.markedBy || "Event Coordinator";
+      const eventName = session?.eventName || "Event";
+      const sessionName = session?.sessionName || "Session";
+      const period = session?.period || "N/A";
+      const method = r.verificationMethod === "qr_scan" ? "QR Scanned" : "Coordinator Check-in";
+      const time = new Date(r.markedAt).toLocaleString();
+
+      return [
+        index + 1,
+        `"${coordId}"`,
+        `"${name.replace(/"/g, '""')}"`,
+        `"${dept}"`,
+        `"${role.replace(/"/g, '""')}"`,
+        `"${eventName.replace(/"/g, '""')}"`,
+        `"${sessionName.replace(/"/g, '""')}"`,
+        `"${period}"`,
+        `"${method}"`,
+        `"${time}"`,
+        `"${r.status}"`,
+      ].join(",");
+    });
+
+    return [headers.join(","), ...rows].join("\n");
+  }
+
+  /**
+   * Downloads the coordinator attendance CSV.
+   */
+  async downloadCoordinatorAttendanceCSV(sessionId?: string): Promise<void> {
+    const csvContent = await this.generateCoordinatorAttendanceCSV(sessionId);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    const dateStr = new Date().toISOString().split("T")[0];
+    link.setAttribute("href", url);
+    link.setAttribute("download", `ciet_coders_club_coordinators_attendance_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
