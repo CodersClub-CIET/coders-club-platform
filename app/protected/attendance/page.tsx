@@ -334,14 +334,15 @@ export default function AttendanceManagementPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                <div className="mt-5 pt-3 border-t border-slate-100 space-y-2">
+                  {/* Primary Row: QR & Live Feed */}
+                  <div className={session.isActive ? "grid grid-cols-2 gap-2" : "flex"}>
                     {session.isActive && (
                       <Button
                         type="button"
                         size="sm"
                         onClick={() => setActiveQRModalSession(session)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold gap-1.5"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold gap-1.5 w-full shadow-sm"
                       >
                         <QrCode className="size-3.5" />
                         Show QR
@@ -353,58 +354,65 @@ export default function AttendanceManagementPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setActiveMonitorSession(session)}
-                      className="text-xs font-medium text-slate-700 gap-1.5"
+                      className={`text-xs font-medium text-slate-700 gap-1.5 hover:bg-slate-50 ${
+                        session.isActive ? "w-full" : "w-full"
+                      }`}
                     >
-                      <Users className="size-3.5" />
+                      <Users className="size-3.5 text-indigo-600" />
                       Live Feed
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownloadCSV(session.id)}
-                      className="text-xs font-medium text-slate-700 gap-1.5"
-                      title="Download CSV attendance sheet for OD / college records"
-                    >
-                      <Download className="size-3.5 text-indigo-600" />
-                      CSV
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setActiveODSession(session)}
-                      className="text-xs font-medium text-slate-700 gap-1.5"
-                      title="Generate Official On-Duty (OD) Sheet for HODs/Faculty"
-                    >
-                      <FileText className="size-3.5 text-indigo-600" />
-                      OD Report
                     </Button>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    {session.isActive && (
+                  {/* Secondary Row: CSV, OD Report, End, Delete */}
+                  <div className="flex items-center justify-between gap-1 pt-1 border-t border-slate-50">
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadCSV(session.id)}
+                        className="h-8 px-2 text-[11px] font-medium text-slate-700 gap-1 hover:bg-slate-50"
+                        title="Download CSV attendance sheet for OD / college records"
+                      >
+                        <Download className="size-3 text-indigo-600" />
+                        CSV
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActiveODSession(session)}
+                        className="h-8 px-2 text-[11px] font-medium text-slate-700 gap-1 hover:bg-slate-50"
+                        title="Generate Official On-Duty (OD) Sheet for HODs/Faculty"
+                      >
+                        <FileText className="size-3 text-indigo-600" />
+                        OD Report
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {session.isActive && (
+                        <button
+                          type="button"
+                          onClick={() => handleEndSession(session.id)}
+                          className="h-8 px-2 text-[11px] font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 border border-rose-200"
+                          title="End this session"
+                        >
+                          <StopCircle className="size-3" />
+                          End
+                        </button>
+                      )}
+
                       <button
                         type="button"
-                        onClick={() => handleEndSession(session.id)}
-                        className="text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
-                        title="End this session"
+                        onClick={() => handleDeleteSession(session.id, session.sessionName)}
+                        className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Delete session"
                       >
-                        <StopCircle className="size-3.5" />
-                        End
+                        <Trash2 className="size-3.5" />
                       </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSession(session.id, session.sessionName)}
-                      className="text-xs font-medium text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-md transition-colors"
-                      title="Delete session"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                    </div>
                   </div>
                 </div>
               </div>
