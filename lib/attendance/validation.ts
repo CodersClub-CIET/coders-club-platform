@@ -115,19 +115,20 @@ export function validateAssociateSubmission(
 }
 
 /**
- * Checks if a student or associate has already recorded attendance in the given session records.
- * Provides client-side instant detection, while the server enforces the definitive DB unique constraint.
+ * Checks if a student or coordinator (associate) has already recorded attendance in the given session records.
+ * Provides instant detection on client & service layers, enforcing strict duplicate prevention.
  */
 export function checkDuplicateAttendance(
   records: AttendanceRecord[],
-  identifier: { studentRegNo?: string; associateUserId?: string }
+  identifier: { studentRegNo?: string; associateUserId?: string; sessionId?: string }
 ): boolean {
   if (identifier.studentRegNo) {
     const targetReg = identifier.studentRegNo.trim().toLowerCase();
     return records.some(
       (r) =>
         r.studentRegNo?.trim().toLowerCase() === targetReg &&
-        r.attendeeType === "student"
+        r.attendeeType === "student" &&
+        (!identifier.sessionId || r.sessionId === identifier.sessionId)
     );
   }
 
@@ -136,7 +137,8 @@ export function checkDuplicateAttendance(
     return records.some(
       (r) =>
         r.associateUserId?.trim().toLowerCase() === targetAssoc &&
-        r.attendeeType === "associate"
+        r.attendeeType === "associate" &&
+        (!identifier.sessionId || r.sessionId === identifier.sessionId)
     );
   }
 

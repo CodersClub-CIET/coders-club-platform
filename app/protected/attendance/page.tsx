@@ -13,9 +13,11 @@ import CreateSessionModal from "@/components/attendance/create-session-modal";
 import ODReportModal from "@/components/attendance/od-report-modal";
 import AttendanceAnalyticsView from "@/components/attendance/attendance-analytics-view";
 import StudentLookupView from "@/components/attendance/student-lookup-view";
+import CoordinatorAttendanceView from "@/components/attendance/coordinator-attendance-view";
 import {
   Activity,
   BarChart3,
+  Briefcase,
   Calendar,
   CheckCircle,
   Clock,
@@ -36,7 +38,7 @@ import {
 } from "lucide-react";
 
 export default function AttendanceManagementPage() {
-  const [activeTab, setActiveTab] = useState<"sessions" | "analytics" | "lookup">("sessions");
+  const [activeTab, setActiveTab] = useState<"sessions" | "coordinators" | "analytics" | "lookup">("sessions");
   const [sessions, setSessions] = useState<AttendanceSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -221,6 +223,19 @@ export default function AttendanceManagementPage() {
             >
               <Calendar className="size-3.5" />
               <span>Sessions ({sessions.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("coordinators")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeTab === "coordinators"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <Briefcase className="size-3.5" />
+              <span>Coordinator Attendance</span>
             </button>
 
             <button
@@ -527,6 +542,12 @@ export default function AttendanceManagementPage() {
         )}
       </div>
     </>
+  )}
+
+  {activeTab === "coordinators" && (
+    <div className="max-w-7xl mx-auto">
+      <CoordinatorAttendanceView />
+    </div>
   )}
 
   {activeTab === "analytics" && (

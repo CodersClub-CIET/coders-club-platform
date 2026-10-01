@@ -114,6 +114,26 @@ export interface ManualAttendanceInput {
   markedBy?: string;
 }
 
+export const COORDINATOR_ROLES = [
+  "Club Executive",
+  "Event Coordinator",
+  "Technical Volunteer",
+  "Design Lead",
+  "Core Team Member",
+  "Faculty Coordinator",
+] as const;
+
+export type CoordinatorRole = (typeof COORDINATOR_ROLES)[number];
+
+export interface CoordinatorAttendanceInput {
+  sessionId: string;
+  coordinatorId: string;
+  coordinatorName: string;
+  department: string;
+  role: string;
+  markedBy?: string;
+}
+
 export interface AttendanceValidationResult {
   isValid: boolean;
   errors: string[];
