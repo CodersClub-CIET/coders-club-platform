@@ -4,10 +4,12 @@ export const dynamic = "force-dynamic";
 
 import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   HandshakeChallenge,
   StudentAttendanceSubmission,
   AssociateAttendanceSubmission,
+  AttendanceSession,
   DEPARTMENTS,
 } from "@/lib/attendance/types";
 import { attendanceService } from "@/lib/attendance/attendance-service";
@@ -18,11 +20,14 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   AlertCircle,
+  ArrowLeft,
   Briefcase,
   CheckCircle2,
   Clock,
   GraduationCap,
+  Layers,
   QrCode,
+  RefreshCw,
   ShieldAlert,
   ShieldCheck,
   Sun,
@@ -42,13 +47,19 @@ const ASSOCIATE_ROLES = [
 function ScanContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const modeParam = searchParams.get("mode");
 
-  const [attendeeMode, setAttendeeMode] = useState<"student" | "associate">("student");
+  const [attendeeMode, setAttendeeMode] = useState<"student" | "associate">(
+    modeParam === "associate" ? "associate" : "student"
+  );
   const [handshake, setHandshake] = useState<HandshakeChallenge | null>(null);
+  const [activeSessions, setActiveSessions] = useState<AttendanceSession[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(300); // 5 minutes
   const [error, setError] = useState<string | null>(null);
+  const [noActiveSessions, setNoActiveSessions] = useState(false);
 
   const [successRecord, setSuccessRecord] = useState<{
     name: string;
@@ -84,40 +95,91 @@ function ScanContent() {
     associateUserId: "",
     associateName: "",
     department: "CSE",
-    role: "Club Executive",
+    role: "Event Coordinator",
   });
 
-  // 1. Perform server-authoritative handshake on load
-  useEffect(() => {
-    let isMounted = true;
+  // 1. Initialize Verification / Handshake
+  const initVerification = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setNoActiveSessions(false);
 
-    async function initHandshake() {
-      if (!token) {
-        setError("Invalid QR scan. Missing token parameter.");
+      if (modeParam === "associate") {
+        setAttendeeMode("associate");
+      }
+
+      // If a QR token is present in the URL query string:
+      if (token) {
+        try {
+          const challenge = await attendanceService.performHandshake(token);
+          setHandshake(challenge);
+          setTimeLeft(challenge.expiresInSeconds);
+          setSelectedSessionId(challenge.sessionId);
+          if (challenge.targetAttendeeType === "associate" || modeParam === "associate") {
+            setAttendeeMode("associate");
+          }
+          setLoading(false);
+          return;
+        } catch (err: unknown) {
+          // Token expired or invalid — check active sessions for direct fallback
+          console.warn("QR Token verification failed, checking active sessions fallback", err);
+          setError(err instanceof Error ? err.message : "QR token expired or invalid.");
+        }
+      }
+
+      // If no token or token handshake failed: Auto-bind to available active sessions
+      const allSessions = await attendanceService.getSessions();
+      const active = allSessions.filter((s) => s.isActive);
+      setActiveSessions(active);
+
+      if (active.length === 0) {
+        setNoActiveSessions(true);
+        if (!token) {
+          setError(null);
+        }
         setLoading(false);
         return;
       }
 
-      try {
-        setLoading(true);
-        const challenge = await attendanceService.performHandshake(token);
-        if (!isMounted) return;
+      // Automatically bind to the first active session
+      const targetSession = active[0];
+      setSelectedSessionId(targetSession.id);
 
-        setHandshake(challenge);
-        setTimeLeft(challenge.expiresInSeconds);
-        setLoading(false);
-      } catch (err: unknown) {
-        if (!isMounted) return;
-        setError(err instanceof Error ? err.message : "Failed to verify attendance QR token.");
-        setLoading(false);
+      const targetType = modeParam === "associate" ? "associate" : "student";
+      const challenge = await attendanceService.createDirectChallenge(targetSession.id, targetType);
+
+      setHandshake(challenge);
+      setTimeLeft(challenge.expiresInSeconds);
+      if (modeParam === "associate") {
+        setAttendeeMode("associate");
       }
+      setLoading(false);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to initialize attendance verification.");
+      setLoading(false);
     }
+  };
 
-    initHandshake();
-    return () => {
-      isMounted = false;
-    };
-  }, [token]);
+  useEffect(() => {
+    initVerification();
+  }, [token, modeParam]);
+
+  // Handle manual session switch when multiple active sessions exist
+  const handleSessionChange = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      setSelectedSessionId(sessionId);
+      const newChallenge = await attendanceService.createDirectChallenge(sessionId, attendeeMode);
+      setHandshake(newChallenge);
+      setTimeLeft(newChallenge.expiresInSeconds);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to switch active session.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // 2. Countdown timer for anti-replay challenge window (5 minutes)
   useEffect(() => {
@@ -127,7 +189,7 @@ function ScanContent() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          setError("Attendance submission window expired. Please scan the QR code again.");
+          setError("Attendance submission window expired. Please refresh to renew.");
           return 0;
         }
         return prev - 1;
@@ -136,6 +198,25 @@ function ScanContent() {
 
     return () => clearInterval(timer);
   }, [handshake, successRecord, timeLeft]);
+
+  // Handle Refresh Security Window
+  const handleRenewChallenge = async () => {
+    if (!selectedSessionId && !handshake?.sessionId) return;
+    const targetSessionId = selectedSessionId || handshake?.sessionId;
+    if (!targetSessionId) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const renewed = await attendanceService.createDirectChallenge(targetSessionId, attendeeMode);
+      setHandshake(renewed);
+      setTimeLeft(renewed.expiresInSeconds);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to renew challenge.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle Student Submission
   const handleStudentSubmit = async (e: React.FormEvent) => {
@@ -177,7 +258,7 @@ function ScanContent() {
     }
   };
 
-  // Handle Associate Submission
+  // Handle Associate / Coordinator Submission
   const handleAssociateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!handshake) return;
@@ -209,19 +290,19 @@ function ScanContent() {
         markedAt: record.markedAt,
       });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to record attendance.");
+      setError(err instanceof Error ? err.message : "Failed to record coordinator attendance.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-center items-center p-4">
-      {/* Container */}
-      <div className="w-full max-w-md bg-slate-800/90 backdrop-blur-xl border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4">
+      {/* Container Box */}
+      <div className="w-full max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
         {/* Brand Banner */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-700/60 mb-5">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
+          <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
               <QrCode className="size-5" />
             </div>
@@ -240,25 +321,67 @@ function ScanContent() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <div className="size-10 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin" />
-            <p className="text-xs text-slate-400 font-medium">Validating QR token & initiating handshake...</p>
+            <p className="text-xs text-slate-400 font-medium">Connecting to attendance session...</p>
+          </div>
+        ) : noActiveSessions ? (
+          /* No Active Sessions State */
+          <div className="py-8 text-center flex flex-col items-center">
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-3">
+              <Clock className="size-8" />
+            </div>
+            <h2 className="text-base font-bold text-white mb-1.5">No Active Attendance Session</h2>
+            <p className="text-xs text-slate-400 max-w-xs mb-6 leading-relaxed">
+              There are currently no attendance sessions open for check-in. Please wait for an event coordinator or club lead to launch a session.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full max-w-xs">
+              <Button
+                type="button"
+                onClick={initVerification}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 px-4 rounded-xl gap-2 shadow-md transition-all"
+              >
+                <RefreshCw className="size-3.5" />
+                Check Again
+              </Button>
+              <Link
+                href="/attendance"
+                className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700/80 px-4 py-2 rounded-xl border border-slate-700 transition-colors"
+              >
+                <ArrowLeft className="size-3.5" />
+                Attendance Suite
+              </Link>
+            </div>
           </div>
         ) : error && !handshake ? (
-          /* Critical Error (invalid token or expired) */
+          /* Error State with fallback options */
           <div className="py-8 text-center flex flex-col items-center">
             <div className="p-3 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 mb-3">
               <ShieldAlert className="size-8" />
             </div>
-            <h2 className="text-base font-bold text-white mb-1">Scan Validation Failed</h2>
-            <p className="text-xs text-rose-300 max-w-xs mb-6">{error}</p>
-            <p className="text-[11px] text-slate-400">
-              Please ask the session coordinator to project the active QR code and scan again using your phone camera.
-            </p>
+            <h2 className="text-base font-bold text-white mb-1">Scan Verification Notice</h2>
+            <p className="text-xs text-rose-300 max-w-xs mb-5 leading-relaxed">{error}</p>
+            <div className="flex flex-col gap-2 w-full max-w-xs">
+              <Button
+                type="button"
+                onClick={initVerification}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 rounded-xl gap-2"
+              >
+                <RefreshCw className="size-3.5" />
+                Retry Connection
+              </Button>
+              <Link
+                href="/attendance"
+                className="inline-flex items-center justify-center gap-1 text-xs text-slate-400 hover:text-white py-2"
+              >
+                <ArrowLeft className="size-3.5" />
+                Back to Attendance Dashboard
+              </Link>
+            </div>
           </div>
         ) : successRecord ? (
           /* Success Screen */
-          <div className="py-8 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
+          <div className="py-6 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
             <div
-              className={`p-3 rounded-full mb-3 border ${
+              className={`p-3 rounded-2xl mb-3 border ${
                 successRecord.type === "associate"
                   ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
                   : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
@@ -272,25 +395,25 @@ function ScanContent() {
             </div>
             <h2 className="text-xl font-extrabold text-white mb-1">
               {successRecord.type === "associate"
-                ? "Associate Check-in Confirmed!"
+                ? "Coordinator Check-in Confirmed!"
                 : "Attendance Confirmed!"}
             </h2>
             <p
-              className={`text-xs font-medium mb-6 ${
+              className={`text-xs font-medium mb-5 ${
                 successRecord.type === "associate" ? "text-purple-300" : "text-emerald-300"
               }`}
             >
-              Your presence has been recorded successfully.
+              Presence successfully verified and recorded in CIET database.
             </p>
 
-            <div className="w-full bg-slate-900/60 rounded-2xl p-4 border border-slate-700/50 text-left space-y-2 mb-6">
+            <div className="w-full bg-slate-950/70 rounded-2xl p-4 border border-slate-800 text-left space-y-2 mb-5">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">Attendee:</span>
                 <span className="font-semibold text-white">{successRecord.name}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">
-                  {successRecord.type === "associate" ? "Associate ID:" : "Reg Number:"}
+                  {successRecord.type === "associate" ? "Coordinator ID:" : "Reg Number:"}
                 </span>
                 <span className="font-mono font-semibold text-indigo-300">
                   {successRecord.identifier}
@@ -298,7 +421,7 @@ function ScanContent() {
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">
-                  {successRecord.type === "associate" ? "Role:" : "Class:"}
+                  {successRecord.type === "associate" ? "Club Role:" : "Class & Sec:"}
                 </span>
                 <span
                   className={
@@ -330,18 +453,31 @@ function ScanContent() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-              <Sparkles className="size-3.5 text-indigo-400" />
-              <span>You may now close this browser tab.</span>
+            <div className="flex flex-col items-center gap-2.5 w-full">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSuccessRecord(null);
+                  handleRenewChallenge();
+                }}
+                className="w-full bg-slate-800 hover:bg-slate-700 border-slate-700 text-white text-xs font-semibold py-2 rounded-xl transition-all"
+              >
+                Record Another Check-in
+              </Button>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
+                <Sparkles className="size-3.5 text-indigo-400" />
+                <span>You may now close this browser tab.</span>
+              </div>
             </div>
           </div>
         ) : (
           /* Submission Form */
           <div>
             {/* Event Summary Card */}
-            <div className="bg-slate-900/60 rounded-2xl p-4 border border-slate-700/50 mb-4">
+            <div className="bg-slate-950/70 rounded-2xl p-4 border border-slate-800 mb-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-indigo-400">{handshake?.eventName}</span>
+                <span className="text-xs font-semibold text-indigo-300">{handshake?.eventName}</span>
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${
                     handshake?.period === "morning"
@@ -360,19 +496,51 @@ function ScanContent() {
                   <Clock className="size-3 text-slate-400" />
                   Security Window:
                 </span>
-                <span
-                  className={`font-mono font-bold ${
-                    timeLeft <= 60 ? "text-rose-400 animate-pulse" : "text-emerald-400"
-                  }`}
-                >
-                  {Math.floor(timeLeft / 60).toString().padStart(2, "0")}:
-                  {(timeLeft % 60).toString().padStart(2, "0")} remaining
-                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`font-mono font-bold ${
+                      timeLeft <= 60 ? "text-rose-400 animate-pulse" : "text-emerald-400"
+                    }`}
+                  >
+                    {Math.floor(timeLeft / 60).toString().padStart(2, "0")}:
+                    {(timeLeft % 60).toString().padStart(2, "0")} remaining
+                  </span>
+                  {timeLeft <= 30 && (
+                    <button
+                      type="button"
+                      onClick={handleRenewChallenge}
+                      className="text-[10px] text-indigo-400 hover:text-indigo-300 underline"
+                    >
+                      Renew
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Segmented Mode Selector: Student vs Associate */}
-            <div className="flex rounded-xl bg-slate-900/90 p-1 border border-slate-700/80 mb-4">
+            {/* Active Session Selector (if multiple active sessions exist) */}
+            {activeSessions.length > 1 && (
+              <div className="mb-4 bg-slate-950/40 p-2.5 rounded-xl border border-slate-800">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 mb-1.5">
+                  <Layers className="size-3 text-indigo-400" />
+                  <span>Select Active Event:</span>
+                </div>
+                <select
+                  value={selectedSessionId}
+                  onChange={(e) => handleSessionChange(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                >
+                  {activeSessions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.sessionName} ({s.period} period)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Segmented Mode Selector: Student vs Coordinator */}
+            <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 mb-4">
               <button
                 type="button"
                 onClick={() => {
@@ -401,7 +569,7 @@ function ScanContent() {
                 }`}
               >
                 <Briefcase className="size-4" />
-                Associate Check-in
+                Coordinator Check-in
               </button>
             </div>
 
@@ -419,7 +587,7 @@ function ScanContent() {
               <form onSubmit={handleStudentSubmit} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Registration Number
+                    Registration Number <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -429,13 +597,16 @@ function ScanContent() {
                     onChange={(e) =>
                       setStudentForm({ ...studentForm, studentRegNo: e.target.value })
                     }
-                    className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-mono placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white font-mono placeholder-slate-500 focus:outline-none focus:border-indigo-500 uppercase"
                   />
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">
+                    Duplicate submissions per session are automatically rejected
+                  </span>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Full Name
+                    Full Name <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -445,7 +616,7 @@ function ScanContent() {
                     onChange={(e) =>
                       setStudentForm({ ...studentForm, studentName: e.target.value })
                     }
-                    className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
@@ -457,7 +628,7 @@ function ScanContent() {
                       onChange={(e) =>
                         setStudentForm({ ...studentForm, department: e.target.value })
                       }
-                      className="w-full px-2 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full px-2 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
                     >
                       {DEPARTMENTS.map((dept) => (
                         <option key={dept} value={dept}>
@@ -474,7 +645,7 @@ function ScanContent() {
                       onChange={(e) =>
                         setStudentForm({ ...studentForm, year: Number(e.target.value) })
                       }
-                      className="w-full px-2 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full px-2 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
                     >
                       <option value={1}>1</option>
                       <option value={2}>2</option>
@@ -490,7 +661,7 @@ function ScanContent() {
                       onChange={(e) =>
                         setStudentForm({ ...studentForm, section: e.target.value })
                       }
-                      className="w-full px-2 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full px-2 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
                     >
                       <option value="A">A</option>
                       <option value="B">B</option>
@@ -508,27 +679,30 @@ function ScanContent() {
                 </Button>
               </form>
             ) : (
-              /* ASSOCIATE FORM */
+              /* COORDINATOR / ASSOCIATE FORM */
               <form onSubmit={handleAssociateSubmit} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Associate ID / Reg No
+                    Coordinator ID / Reg No <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. CIET-ASSOC-101 or 917621..."
+                    placeholder="e.g. CIET-CORD-01 or 917621104001"
                     value={associateForm.associateUserId}
                     onChange={(e) =>
                       setAssociateForm({ ...associateForm, associateUserId: e.target.value })
                     }
-                    className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white font-mono placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white font-mono placeholder-slate-500 focus:outline-none focus:border-purple-500 uppercase"
                   />
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">
+                    Cross-verified against Supabase database for duplicate entries
+                  </span>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Full Name
+                    Full Name <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -538,7 +712,7 @@ function ScanContent() {
                     onChange={(e) =>
                       setAssociateForm({ ...associateForm, associateName: e.target.value })
                     }
-                    className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
                   />
                 </div>
 
@@ -552,7 +726,7 @@ function ScanContent() {
                       onChange={(e) =>
                         setAssociateForm({ ...associateForm, role: e.target.value })
                       }
-                      className="w-full px-2.5 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500"
+                      className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500"
                     >
                       {ASSOCIATE_ROLES.map((role) => (
                         <option key={role} value={role}>
@@ -571,7 +745,7 @@ function ScanContent() {
                       onChange={(e) =>
                         setAssociateForm({ ...associateForm, department: e.target.value })
                       }
-                      className="w-full px-2.5 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500"
+                      className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500"
                     >
                       {DEPARTMENTS.map((dept) => (
                         <option key={dept} value={dept}>
@@ -587,7 +761,7 @@ function ScanContent() {
                   disabled={submitting || timeLeft <= 0}
                   className="w-full mt-2 py-2.5 text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg transition-all disabled:opacity-50"
                 >
-                  {submitting ? "Verifying & Recording..." : "Confirm Associate Attendance"}
+                  {submitting ? "Verifying & Recording..." : "Confirm Coordinator Attendance"}
                 </Button>
               </form>
             )}
@@ -595,7 +769,7 @@ function ScanContent() {
         )}
 
         {/* Footer Info inside the card box */}
-        <div className="mt-6 pt-4 border-t border-slate-700/60 text-center text-[11px] text-slate-400 flex flex-col items-center gap-0.5">
+        <div className="mt-6 pt-4 border-t border-slate-800 text-center text-[11px] text-slate-400 flex flex-col items-center gap-0.5">
           <div className="flex items-center gap-1.5 text-slate-300 font-medium">
             <GraduationCap className="size-3.5 text-indigo-400" />
             <span>Coimbatore Institute of Engineering and Technology</span>
@@ -614,7 +788,7 @@ export default function StudentScanPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center text-xs text-slate-400">
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center text-xs text-slate-400">
           Loading attendance verification...
         </div>
       }

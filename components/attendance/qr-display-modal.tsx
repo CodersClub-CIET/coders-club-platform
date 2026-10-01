@@ -19,10 +19,12 @@ import {
 
 interface QRDisplayModalProps {
   session: AttendanceSession;
+  initialAttendeeType?: "student" | "associate";
   onClose: () => void;
 }
 
-export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps) {
+export default function QRDisplayModal({ session, initialAttendeeType = "student", onClose }: QRDisplayModalProps) {
+  const [attendeeType, setAttendeeType] = useState<"student" | "associate">(initialAttendeeType);
   const [qrData, setQrData] = useState<QRTokenData | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
@@ -34,14 +36,15 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
     try {
       setLoading(true);
       setError(null);
-      const data = await attendanceService.generateSessionQR(session.id);
+      const data = await attendanceService.generateSessionQR(session.id, attendeeType);
       setQrData(data);
 
+      const isAssociate = attendeeType === "associate";
       const url = await QRCode.toDataURL(data.scanUrl, {
         width: 320,
         margin: 2,
         color: {
-          dark: "#0f172a", // slate-900
+          dark: isAssociate ? "#4c1d95" : "#0f172a", // purple-900 or slate-900
           light: "#ffffff",
         },
         errorCorrectionLevel: "M",
@@ -58,7 +61,7 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
 
   useEffect(() => {
     loadQR();
-  }, [session.id]);
+  }, [session.id, attendeeType]);
 
   // 5-minute live countdown timer
   useEffect(() => {
@@ -98,11 +101,13 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/50">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+            <div className={`p-2 rounded-lg ${attendeeType === "associate" ? "bg-purple-50 text-purple-600" : "bg-indigo-50 text-indigo-600"}`}>
               <QrCode className="size-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Attendance QR Code</h2>
+              <h2 className="text-base font-bold text-slate-900">
+                {attendeeType === "associate" ? "Coordinator Attendance QR" : "Participant Attendance QR"}
+              </h2>
               <p className="text-xs text-slate-500 font-mono">Session ID: {session.id}</p>
             </div>
           </div>
@@ -117,10 +122,42 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
 
         {/* Content */}
         <div className="p-6 flex flex-col items-center text-center">
+          {/* QR Type Switcher Tab */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl mb-4 w-full max-w-xs">
+            <button
+              type="button"
+              onClick={() => setAttendeeType("student")}
+              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                attendeeType === "student"
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Participant QR
+            </button>
+            <button
+              type="button"
+              onClick={() => setAttendeeType("associate")}
+              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                attendeeType === "associate"
+                  ? "bg-purple-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Coordinator QR
+            </button>
+          </div>
+
           {/* Session Badges */}
           <div className="flex flex-wrap items-center justify-center gap-2 mb-3">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
-              {session.eventName}
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                attendeeType === "associate"
+                  ? "bg-purple-100 text-purple-800 border border-purple-200"
+                  : "bg-indigo-100 text-indigo-800"
+              }`}
+            >
+              {attendeeType === "associate" ? "Staff & Coordinator Check-in" : session.eventName}
             </span>
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
@@ -131,7 +168,7 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
             >
               {session.period} Period
             </span>
-            {session.subEventName && (
+            {session.subEventName && attendeeType === "student" && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
                 {session.subEventName}
               </span>
@@ -140,7 +177,9 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
 
           <h3 className="text-lg font-bold text-slate-900 mb-1">{session.sessionName}</h3>
           <p className="text-xs text-slate-500 max-w-sm mb-4">
-            Scan using default mobile camera or Google Lens. Valid for 5 minutes.
+            {attendeeType === "associate"
+              ? "Project for Club Executives, Leads & Technical Volunteers. Valid for 5 minutes."
+              : "Scan using default mobile camera or Google Lens. Valid for 5 minutes."}
           </p>
 
           {/* QR Display Card */}

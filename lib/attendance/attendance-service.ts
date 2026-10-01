@@ -362,9 +362,13 @@ class AttendanceService {
 
   /**
    * Generates a secure temporary QR token for an active session.
+   * Supports generating dedicated QR codes for students or for coordinators.
    * Validity window: EXACTLY 5 MINUTES (300,000 ms).
    */
-  async generateSessionQR(sessionId: string): Promise<QRTokenData> {
+  async generateSessionQR(
+    sessionId: string,
+    attendeeType: "student" | "associate" = "student"
+  ): Promise<QRTokenData> {
     const session = await this.getSessionById(sessionId);
     if (!session) {
       throw new Error("Invalid session ID.");
@@ -382,11 +386,13 @@ class AttendanceService {
       iat: issuedAt,
       exp: expiresAtMs,
       p: session.period,
+      type: attendeeType,
     });
 
     const token = typeof window !== "undefined" ? btoa(rawPayload) : Buffer.from(rawPayload).toString("base64");
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
-    const scanUrl = `${baseUrl}/attendance/scan?token=${encodeURIComponent(token)}`;
+    const modeParam = attendeeType === "associate" ? "&mode=associate" : "";
+    const scanUrl = `${baseUrl}/attendance/scan?token=${encodeURIComponent(token)}${modeParam}`;
 
     return {
       sessionId,
@@ -394,13 +400,15 @@ class AttendanceService {
       scanUrl,
       issuedAt: new Date(issuedAt).toISOString(),
       expiresAt: new Date(expiresAtMs).toISOString(),
+      attendeeType,
     };
   }
 
   /**
-   * Performs the anti-replay handshake when a student scans the QR URL.
+   * Performs the anti-replay handshake when a student or coordinator scans the QR URL.
    * 1. Validates that the 5-minute QR code has not expired.
    * 2. Generates a single-use challenge token valid for 5 minutes (300 seconds).
+   * 3. Retains whether this is a participant or coordinator scan.
    */
   async performHandshake(token: string): Promise<HandshakeChallenge> {
     try {
@@ -429,6 +437,8 @@ class AttendanceService {
         consumed: false,
       });
 
+      const targetAttendeeType = payload.type === "associate" ? "associate" : "student";
+
       return {
         valid: true,
         sessionId: session.id,
@@ -437,6 +447,7 @@ class AttendanceService {
         period: session.period,
         challengeToken,
         expiresInSeconds: 300,
+        targetAttendeeType,
       };
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("expired")) {
@@ -444,6 +455,44 @@ class AttendanceService {
       }
       throw new Error("Invalid or corrupted QR attendance token.");
     }
+  }
+
+  /**
+   * Creates a challenge directly for an active session without requiring an encoded QR token.
+   * Enables direct check-in from dashboard links and session switchers.
+   */
+  async createDirectChallenge(
+    sessionId: string,
+    attendeeType: "student" | "associate" = "student"
+  ): Promise<HandshakeChallenge> {
+    const session = await this.getSessionById(sessionId);
+    if (!session) {
+      throw new Error("Attendance session could not be found.");
+    }
+    if (!session.isActive) {
+      throw new Error(`Session "${session.sessionName}" is closed and is no longer accepting attendance.`);
+    }
+
+    const challengeToken = `chal-dir-${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
+    const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+    const expiresAt = Date.now() + CHALLENGE_TTL_MS;
+
+    this.saveChallenge(challengeToken, {
+      sessionId: session.id,
+      expiresAt,
+      consumed: false,
+    });
+
+    return {
+      valid: true,
+      sessionId: session.id,
+      eventName: session.eventName,
+      subEventName: session.subEventName,
+      period: session.period,
+      challengeToken,
+      expiresInSeconds: 300,
+      targetAttendeeType: attendeeType,
+    };
   }
 
   /**

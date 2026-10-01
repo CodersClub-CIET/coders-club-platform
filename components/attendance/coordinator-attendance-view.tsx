@@ -10,6 +10,7 @@ import {
   DEPARTMENTS,
 } from "@/lib/attendance/types";
 import { attendanceService } from "@/lib/attendance/attendance-service";
+import QRDisplayModal from "@/components/attendance/qr-display-modal";
 import { Button } from "@/components/ui/button";
 import {
   AlertCircle,
@@ -21,6 +22,7 @@ import {
   Filter,
   GraduationCap,
   Plus,
+  QrCode,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -37,7 +39,22 @@ export default function CoordinatorAttendanceView() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrModalSession, setQrModalSession] = useState<AttendanceSession | null>(null);
   const [exporting, setExporting] = useState(false);
+
+  const handleOpenCoordinatorQR = () => {
+    let target = sessions.find((s) => s.id === selectedSessionId);
+    if (!target) {
+      target = sessions.find((s) => s.isActive) || sessions[0];
+    }
+    if (!target) {
+      alert("No attendance sessions found. Please create or start a session first.");
+      return;
+    }
+    setQrModalSession(target);
+    setShowQRModal(true);
+  };
 
   // New coordinator form state
   const [formData, setFormData] = useState<{
@@ -191,6 +208,17 @@ export default function CoordinatorAttendanceView() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleOpenCoordinatorQR}
+            disabled={sessions.length === 0}
+            className="bg-purple-950/80 hover:bg-purple-900/90 border-purple-500/50 text-purple-200 hover:text-white text-xs font-semibold py-2 px-3.5 rounded-xl gap-2 shadow-sm transition-all"
+          >
+            <QrCode className="size-3.5 text-purple-300" />
+            Coordinator QR
+          </Button>
+
           <Button
             type="button"
             variant="outline"
@@ -521,6 +549,18 @@ export default function CoordinatorAttendanceView() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Coordinator QR Display Modal */}
+      {showQRModal && qrModalSession && (
+        <QRDisplayModal
+          session={qrModalSession}
+          initialAttendeeType="associate"
+          onClose={() => {
+            setShowQRModal(false);
+            setQrModalSession(null);
+          }}
+        />
       )}
     </div>
   );

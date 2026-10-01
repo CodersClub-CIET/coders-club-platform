@@ -73,6 +73,7 @@ export interface QRTokenData {
   scanUrl: string;
   issuedAt: string;
   expiresAt: string;
+  attendeeType?: AttendeeType;
 }
 
 export interface HandshakeChallenge {
@@ -83,6 +84,7 @@ export interface HandshakeChallenge {
   period: AttendancePeriod;
   challengeToken: string;
   expiresInSeconds: number;
+  targetAttendeeType?: AttendeeType;
 }
 
 export interface StudentAttendanceSubmission {
