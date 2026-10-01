@@ -16,14 +16,27 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!supabaseUrl || supabaseUrl.includes("placeholder")) {
       setError(
         "Supabase credentials are not configured in .env.local (currently using placeholder values). Please set your actual NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY."
       );
+
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError(error.message);
+
       setLoading(false);
       return;
     }
+
 
     try {
       const supabase = createClient();
@@ -54,6 +67,9 @@ export default function LoginPage() {
       );
       setLoading(false);
     }
+
+    window.location.href = "/";
+
   }
 
   return (
