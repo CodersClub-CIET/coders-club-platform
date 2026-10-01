@@ -24,6 +24,7 @@ import {
   StopCircle,
   Sun,
   Moon,
+  Trash2,
   Users,
 } from "lucide-react";
 
@@ -75,6 +76,18 @@ export default function AttendanceManagementPage() {
       await attendanceService.downloadSessionCSV(sessionId);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to download attendance sheet.");
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string, sessionName: string) => {
+    if (!confirm(`Are you sure you want to delete session "${sessionName}" and all its records?`)) {
+      return;
+    }
+    try {
+      await attendanceService.deleteSession(sessionId);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to delete session.");
     }
   };
 
@@ -371,17 +384,28 @@ export default function AttendanceManagementPage() {
                     </Button>
                   </div>
 
-                  {session.isActive && (
+                  <div className="flex items-center gap-1.5">
+                    {session.isActive && (
+                      <button
+                        type="button"
+                        onClick={() => handleEndSession(session.id)}
+                        className="text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
+                        title="End this session"
+                      >
+                        <StopCircle className="size-3.5" />
+                        End
+                      </button>
+                    )}
+
                     <button
                       type="button"
-                      onClick={() => handleEndSession(session.id)}
-                      className="text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
-                      title="End this session"
+                      onClick={() => handleDeleteSession(session.id, session.sessionName)}
+                      className="text-xs font-medium text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-md transition-colors"
+                      title="Delete session"
                     >
-                      <StopCircle className="size-3.5" />
-                      End
+                      <Trash2 className="size-3.5" />
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
             ))}

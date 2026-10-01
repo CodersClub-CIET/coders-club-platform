@@ -1,6 +1,7 @@
 import {
   AttendanceRecord,
   AttendanceSession,
+  AttendanceStatus,
   AssociateAttendanceSubmission,
   CreateSessionInput,
   HandshakeChallenge,
@@ -153,8 +154,15 @@ class AttendanceService {
    * Broadcasts an attendance event across all open browser tabs and in-tab listeners.
    */
   private broadcastEvent(event: {
-    type: "NEW_RECORD" | "NEW_SESSION" | "SESSION_ENDED";
+    type:
+      | "NEW_RECORD"
+      | "UPDATE_RECORD"
+      | "DELETE_RECORD"
+      | "NEW_SESSION"
+      | "SESSION_ENDED"
+      | "SESSION_DELETED";
     sessionId?: string;
+    recordId?: string;
     record?: AttendanceRecord;
     session?: AttendanceSession;
   }): void {
@@ -587,11 +595,80 @@ class AttendanceService {
   }
 
   /**
+   * Updates an attendance record status (e.g. present, late, excused).
+   */
+  async updateRecordStatus(recordId: string, status: AttendanceStatus): Promise<AttendanceRecord> {
+    const records = this.getStoredRecords();
+    const index = records.findIndex((r) => r.id === recordId);
+    if (index === -1) {
+      throw new Error("Attendance record not found.");
+    }
+
+    records[index] = {
+      ...records[index],
+      status,
+    };
+    this.saveStoredRecords(records);
+
+    this.broadcastEvent({
+      type: "UPDATE_RECORD",
+      sessionId: records[index].sessionId,
+      record: records[index],
+    });
+
+    return records[index];
+  }
+
+  /**
+   * Deletes an attendance record.
+   */
+  async deleteRecord(recordId: string): Promise<boolean> {
+    const records = this.getStoredRecords();
+    const record = records.find((r) => r.id === recordId);
+    if (!record) {
+      return false;
+    }
+
+    const filtered = records.filter((r) => r.id !== recordId);
+    this.saveStoredRecords(filtered);
+
+    this.broadcastEvent({
+      type: "DELETE_RECORD",
+      sessionId: record.sessionId,
+      recordId,
+    });
+
+    return true;
+  }
+
+  /**
+   * Deletes an entire attendance session and associated records.
+   */
+  async deleteSession(sessionId: string): Promise<boolean> {
+    const sessions = await this.getSessions();
+    const filteredSessions = sessions.filter((s) => s.id !== sessionId);
+    this.saveStoredSessions(filteredSessions);
+
+    const records = this.getStoredRecords();
+    const filteredRecords = records.filter((r) => r.sessionId !== sessionId);
+    this.saveStoredRecords(filteredRecords);
+
+    this.broadcastEvent({
+      type: "SESSION_DELETED",
+      sessionId,
+    });
+
+    return true;
+  }
+
+  /**
    * Subscribes to live attendee changes via BroadcastChannel, Storage events, CustomEvents, and Supabase Realtime.
    */
   subscribeToLiveAttendees(
     sessionId: string,
-    onNewRecord: (record: AttendanceRecord) => void
+    onNewRecord: (record: AttendanceRecord) => void,
+    onRecordUpdated?: (record: AttendanceRecord) => void,
+    onRecordDeleted?: (recordId: string) => void
   ): () => void {
     const unsubscribers: Array<() => void> = [];
 
@@ -600,8 +677,14 @@ class AttendanceService {
       const handleCustomEvent = (e: Event) => {
         const customEvent = e as CustomEvent;
         const data = customEvent.detail;
-        if (data && data.type === "NEW_RECORD" && data.sessionId === sessionId && data.record) {
-          onNewRecord(data.record);
+        if (data && data.sessionId === sessionId) {
+          if (data.type === "NEW_RECORD" && data.record) {
+            onNewRecord(data.record);
+          } else if (data.type === "UPDATE_RECORD" && data.record) {
+            onRecordUpdated?.(data.record);
+          } else if (data.type === "DELETE_RECORD" && data.recordId) {
+            onRecordDeleted?.(data.recordId);
+          }
         }
       };
       window.addEventListener("coders_club_attendance_event", handleCustomEvent);
@@ -612,8 +695,14 @@ class AttendanceService {
         const bc = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
         bc.onmessage = (event) => {
           const data = event.data;
-          if (data && data.type === "NEW_RECORD" && data.sessionId === sessionId && data.record) {
-            onNewRecord(data.record);
+          if (data && data.sessionId === sessionId) {
+            if (data.type === "NEW_RECORD" && data.record) {
+              onNewRecord(data.record);
+            } else if (data.type === "UPDATE_RECORD" && data.record) {
+              onRecordUpdated?.(data.record);
+            } else if (data.type === "DELETE_RECORD" && data.recordId) {
+              onRecordDeleted?.(data.recordId);
+            }
           }
         };
         unsubscribers.push(() => {

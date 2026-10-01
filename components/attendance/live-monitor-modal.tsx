@@ -1,19 +1,21 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { AttendanceRecord, AttendanceSession } from "@/lib/attendance/types";
+import { AttendanceRecord, AttendanceSession, AttendanceStatus } from "@/lib/attendance/types";
 import { attendanceService } from "@/lib/attendance/attendance-service";
 import { Button } from "@/components/ui/button";
 import ManualEntryModal from "@/components/attendance/manual-entry-modal";
 import ODReportModal from "@/components/attendance/od-report-modal";
 import {
   Activity,
+  BarChart2,
   CheckCircle2,
   Download,
   FileText,
   GraduationCap,
   Radio,
   Search,
+  Trash2,
   UserCheck,
   UserPlus,
   Users,
@@ -53,9 +55,18 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
     fetchInitialRecords();
 
     // Subscribe to live attendee entries via Supabase Realtime + BroadcastChannel
-    const unsubscribe = attendanceService.subscribeToLiveAttendees(session.id, (newRecord) => {
-      setRecords((prev) => [newRecord, ...prev.filter((r) => r.id !== newRecord.id)]);
-    });
+    const unsubscribe = attendanceService.subscribeToLiveAttendees(
+      session.id,
+      (newRecord) => {
+        setRecords((prev) => [newRecord, ...prev.filter((r) => r.id !== newRecord.id)]);
+      },
+      (updatedRecord) => {
+        setRecords((prev) => prev.map((r) => (r.id === updatedRecord.id ? updatedRecord : r)));
+      },
+      (deletedId) => {
+        setRecords((prev) => prev.filter((r) => r.id !== deletedId));
+      }
+    );
 
     // Also poll every 2 seconds to catch submissions from phones/other devices on the network
     const interval = setInterval(async () => {
@@ -76,6 +87,27 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
     };
   }, [session.id]);
 
+  const handleStatusChange = async (recordId: string, newStatus: AttendanceStatus) => {
+    try {
+      const updated = await attendanceService.updateRecordStatus(recordId, newStatus);
+      setRecords((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to update attendee status.");
+    }
+  };
+
+  const handleDeleteRecord = async (recordId: string, name: string) => {
+    if (!confirm(`Are you sure you want to remove attendance for "${name}"?`)) {
+      return;
+    }
+    try {
+      await attendanceService.deleteRecord(recordId);
+      setRecords((prev) => prev.filter((r) => r.id !== recordId));
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to remove record.");
+    }
+  };
+
   const handleExportCSV = async () => {
     try {
       setExporting(true);
@@ -90,6 +122,13 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
   const handleManualRecordCreated = (newRecord: AttendanceRecord) => {
     setRecords((prev) => [newRecord, ...prev.filter((r) => r.id !== newRecord.id)]);
   };
+
+  // Department distribution
+  const deptCounts = records.reduce<Record<string, number>>((acc, r) => {
+    const dept = r.studentDepartment || "Executive";
+    acc[dept] = (acc[dept] || 0) + 1;
+    return acc;
+  }, {});
 
   // Derived counts
   const studentCount = records.filter((r) => r.attendeeType === "student").length;
@@ -210,6 +249,27 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
           </div>
         </div>
 
+        {/* Department Distribution Strip */}
+        {records.length > 0 && Object.keys(deptCounts).length > 0 && (
+          <div className="px-6 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto text-[11px] shrink-0">
+            <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider shrink-0 flex items-center gap-1 mr-1">
+              <BarChart2 className="size-3 text-indigo-500" />
+              Depts:
+            </span>
+            {Object.entries(deptCounts).map(([dept, count]) => (
+              <span
+                key={dept}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-700 font-medium shrink-0"
+              >
+                <span>{dept}</span>
+                <span className="font-bold text-indigo-600 bg-indigo-50 px-1 rounded text-[10px]">
+                  {count}
+                </span>
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Search Bar */}
         <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
           <div className="relative w-72">
@@ -265,6 +325,7 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                   <th className="py-2.5 px-3">Verification</th>
                   <th className="py-2.5 px-3">Status</th>
                   <th className="py-2.5 px-3 text-right">Time</th>
+                  <th className="py-2.5 px-2 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -327,9 +388,21 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                     </td>
 
                     <td className="py-2.5 px-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
-                        Present
-                      </span>
+                      <select
+                        value={record.status}
+                        onChange={(e) => handleStatusChange(record.id, e.target.value as AttendanceStatus)}
+                        className={`text-[10px] font-bold rounded-lg px-2 py-0.5 border cursor-pointer focus:outline-none transition-colors ${
+                          record.status === "present"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : record.status === "late"
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                            : "bg-blue-50 text-blue-700 border-blue-200"
+                        }`}
+                      >
+                        <option value="present">Present</option>
+                        <option value="late">Late</option>
+                        <option value="excused">Excused</option>
+                      </select>
                     </td>
 
                     <td className="py-2.5 px-3 text-right font-mono text-slate-400">
@@ -341,6 +414,22 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                           second: "2-digit",
                         })}
                       </span>
+                    </td>
+
+                    <td className="py-2.5 px-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDeleteRecord(
+                            record.id,
+                            record.studentName || record.associateName || "this attendee"
+                          )
+                        }
+                        className="p-1 rounded text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        title="Remove attendee"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
