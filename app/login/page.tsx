@@ -16,20 +16,45 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    const supabase = createClient();
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(error.message);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl || supabaseUrl.includes("placeholder")) {
+      setError(
+        "Supabase credentials are not configured in .env.local (currently using placeholder values). Please set your actual NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY."
+      );
       setLoading(false);
       return;
     }
 
-    window.location.href = "/";
+    try {
+      const supabase = createClient();
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        if (error.message.includes("Failed to fetch")) {
+          setError(
+            "Cannot connect to Supabase backend: Failed to fetch. Please verify that your NEXT_PUBLIC_SUPABASE_URL in .env.local is valid and reachable."
+          );
+        } else {
+          setError(error.message);
+        }
+        setLoading(false);
+        return;
+      }
+
+      window.location.href = "/";
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred during sign in."
+      );
+      setLoading(false);
+    }
   }
 
   return (
@@ -92,6 +117,16 @@ export default function LoginPage() {
         >
           Test Toast
         </button>
+
+        <div className="pt-2 border-t text-center text-xs text-muted-foreground">
+          <p>Testing Attendance Management?</p>
+          <a
+            href="/attendance"
+            className="text-indigo-600 hover:underline font-medium inline-block mt-1"
+          >
+            Go to Standalone Attendance Portal &rarr;
+          </a>
+        </div>
       </form>
     </main>
   );

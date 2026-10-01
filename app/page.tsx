@@ -1,69 +1,256 @@
-import Image from "next/image";
+import React from "react";
+import Link from "next/link";
+import {
+  Activity,
+  Award,
+  Calendar,
+  CheckCircle2,
+  FileText,
+  GraduationCap,
+  LogIn,
+  QrCode,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Zap,
+} from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+      {/* Top Navigation Bar */}
+      <header className="border-b border-slate-800 bg-slate-950/70 backdrop-blur-xl sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/30">
+              <QrCode className="size-5" />
+            </div>
+            <div>
+              <span className="font-extrabold text-sm tracking-tight text-white block">
+                Coders Club CIET
+              </span>
+              <span className="text-[10px] text-slate-400 block -mt-0.5">
+                Autonomous Institution &bull; Anna University
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href="/attendance"
+              className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-1.5 rounded-lg transition-colors hidden sm:inline-block"
+            >
+              Attendance
+            </Link>
+            <Link
+              href="/scores"
+              className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-1.5 rounded-lg transition-colors hidden sm:inline-block"
+            >
+              Score Board
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/30"
+            >
+              <LogIn className="size-3.5" />
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 flex flex-col justify-center">
+        <div className="text-center max-w-3xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 backdrop-blur-md mb-4">
+            <Sparkles className="size-3.5 text-indigo-400" />
+            <span>Official Event Management & Evaluation Suite</span>
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+            Empowering CIET Coders with <br className="hidden sm:inline" />
+            <span className="bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
+              Smart Attendance & Evaluations
+            </span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+
+          <p className="mt-4 text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            The unified platform for Coimbatore Institute of Engineering and Technology’s
+            Coders Club. Server-authoritative 5-minute QR attendance, live coordinator feeds, OD letter generation, and real-time scoreboards.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Feature Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Card 1: Attendance Management */}
+          <div className="group relative bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-indigo-500/50 rounded-3xl p-6 transition-all shadow-xl hover:shadow-indigo-500/10 flex flex-col justify-between">
+            <div>
+              <div className="size-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <QrCode className="size-6" />
+              </div>
+
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  Attendance
+                </span>
+                <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                  <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live Module
+                </span>
+              </div>
+
+              <h2 className="text-lg font-bold text-white mb-2">
+                Attendance Management
+              </h2>
+
+              <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                Launch morning/afternoon sessions, project high-contrast 5-minute QR codes with anti-replay challenge verification, and record both student and associate presences.
+              </p>
+
+              <div className="space-y-1.5 mb-6 text-[11px] text-slate-300">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-indigo-400 shrink-0" />
+                  <span>5-minute fixed QR token validity</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-indigo-400 shrink-0" />
+                  <span>Student & Associate check-in portals</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-indigo-400 shrink-0" />
+                  <span>Realtime Live Monitor with duplicate prevention</span>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/attendance"
+              className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-600/30"
+            >
+              <span>Open Attendance Console</span>
+              <Zap className="size-3.5" />
+            </Link>
+          </div>
+
+          {/* Card 2: On-Duty (OD) Reports */}
+          <div className="group relative bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-purple-500/50 rounded-3xl p-6 transition-all shadow-xl hover:shadow-purple-500/10 flex flex-col justify-between">
+            <div>
+              <div className="size-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <FileText className="size-6" />
+              </div>
+
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  College Submission
+                </span>
+              </div>
+
+              <h2 className="text-lg font-bold text-white mb-2">
+                Official OD Report Generator
+              </h2>
+
+              <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                Instantly export formal institutional On-Duty (OD) verification sheets with Anna University letterhead, department roster tables, and coordinator signatures.
+              </p>
+
+              <div className="space-y-1.5 mb-6 text-[11px] text-slate-300">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-purple-400 shrink-0" />
+                  <span>Official CIET address & autonomous letterhead</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-purple-400 shrink-0" />
+                  <span>Filter by CSE, IT, Cyber, AI&ML, etc.</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-purple-400 shrink-0" />
+                  <span>1-click Print & PDF ready format</span>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/attendance"
+              className="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-purple-600/30"
+            >
+              <span>View OD Generator</span>
+              <FileText className="size-3.5" />
+            </Link>
+          </div>
+
+          {/* Card 3: Score Management */}
+          <div className="group relative bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-500/50 rounded-3xl p-6 transition-all shadow-xl hover:shadow-amber-500/10 flex flex-col justify-between">
+            <div>
+              <div className="size-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                <Award className="size-6" />
+              </div>
+
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Evaluation
+                </span>
+                <span className="text-[10px] text-amber-400 font-semibold">
+                  Hackathon Ready
+                </span>
+              </div>
+
+              <h2 className="text-lg font-bold text-white mb-2">
+                Score Management
+              </h2>
+
+              <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                Record and calculate criteria-based scores for participants and teams. Real-time ranking calculation with strict schema validation.
+              </p>
+
+              <div className="space-y-1.5 mb-6 text-[11px] text-slate-300">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-amber-400 shrink-0" />
+                  <span>Validation rules & criteria weighting</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-amber-400 shrink-0" />
+                  <span>Dynamic leaderboard calculation</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-amber-400 shrink-0" />
+                  <span>Multi-evaluator consensus</span>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/scores"
+              className="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-600/30"
+            >
+              <span>Go to Score Management</span>
+              <Award className="size-3.5" />
+            </Link>
+          </div>
         </div>
       </main>
+
+      {/* Official CIET Footer Box */}
+      <footer className="border-t border-slate-800 bg-slate-950/80 py-8 px-4 sm:px-6 lg:px-8 mt-12">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div>
+            <div className="flex items-center justify-center sm:justify-start gap-2 text-white font-bold text-sm">
+              <GraduationCap className="size-4 text-indigo-400" />
+              <span>Coimbatore Institute of Engineering and Technology</span>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Narasipuram (P.O), Thondamuthur (Via), Vellimalaipattinam, Coimbatore - 641109, Tamil Nadu &bull; Ph: +91 422-2970703
+            </p>
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              Autonomous Institution Approved by AICTE, New Delhi &bull; Affiliated to Anna University, Chennai
+            </p>
+          </div>
+
+          <div className="text-xs text-slate-500 sm:text-right">
+            <span className="font-semibold text-slate-400">Coders Club Platform</span>
+            <p className="text-[11px] text-slate-500 mt-0.5">Built with Next.js 16 & Supabase</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
