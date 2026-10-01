@@ -49,13 +49,26 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
 
     fetchInitialRecords();
 
-    // Subscribe to live attendee entries via Supabase Realtime
+    // Subscribe to live attendee entries via Supabase Realtime + BroadcastChannel
     const unsubscribe = attendanceService.subscribeToLiveAttendees(session.id, (newRecord) => {
       setRecords((prev) => [newRecord, ...prev.filter((r) => r.id !== newRecord.id)]);
     });
 
+    // Also poll every 2 seconds to catch submissions from phones/other devices on the network
+    const interval = setInterval(async () => {
+      try {
+        const fresh = await attendanceService.getSessionRecords(session.id);
+        if (isMounted) {
+          setRecords(fresh);
+        }
+      } catch {
+        // ignore
+      }
+    }, 2000);
+
     return () => {
       isMounted = false;
+      clearInterval(interval);
       unsubscribe();
     };
   }, [session.id]);

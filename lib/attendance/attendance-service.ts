@@ -9,7 +9,12 @@ import {
 } from "./types";
 import { checkDuplicateAttendance, validateStudentSubmission } from "./validation";
 
-// Standalone Mock State for preview when Supabase backend tables/functions are pending
+const STORAGE_SESSIONS_KEY = "coders_club_attendance_sessions";
+const STORAGE_RECORDS_KEY = "coders_club_attendance_records";
+const STORAGE_CHALLENGES_KEY = "coders_club_attendance_challenges";
+const BROADCAST_CHANNEL_NAME = "coders_club_attendance_live_stream";
+
+// Default Mock State for initial seed
 const MOCK_SESSIONS: AttendanceSession[] = [
   {
     id: "sess-101",
@@ -82,16 +87,142 @@ const MOCK_RECORDS: AttendanceRecord[] = [
 ];
 
 class AttendanceService {
-  private sessions: AttendanceSession[] = [...MOCK_SESSIONS];
-  private records: AttendanceRecord[] = [...MOCK_RECORDS];
-  // Anti-replay challenge storage in-memory fallback
+  // In-memory fallback for challenge tokens
   private activeChallenges: Map<string, { sessionId: string; expiresAt: number; consumed: boolean }> = new Map();
+
+  /**
+   * Reads persistent sessions with fallback to default mock sessions.
+   */
+  private getStoredSessions(): AttendanceSession[] {
+    if (typeof window === "undefined") return [...MOCK_SESSIONS];
+    try {
+      const data = localStorage.getItem(STORAGE_SESSIONS_KEY);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return [...MOCK_SESSIONS];
+  }
+
+  /**
+   * Persists sessions to localStorage.
+   */
+  private saveStoredSessions(sessions: AttendanceSession[]): void {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(sessions));
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
+   * Reads persistent records with fallback to default mock records.
+   */
+  private getStoredRecords(): AttendanceRecord[] {
+    if (typeof window === "undefined") return [...MOCK_RECORDS];
+    try {
+      const data = localStorage.getItem(STORAGE_RECORDS_KEY);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return [...MOCK_RECORDS];
+  }
+
+  /**
+   * Persists records to localStorage.
+   */
+  private saveStoredRecords(records: AttendanceRecord[]): void {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(STORAGE_RECORDS_KEY, JSON.stringify(records));
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
+   * Broadcasts an attendance event across all open browser tabs and in-tab listeners.
+   */
+  private broadcastEvent(event: {
+    type: "NEW_RECORD" | "NEW_SESSION" | "SESSION_ENDED";
+    sessionId?: string;
+    record?: AttendanceRecord;
+    session?: AttendanceSession;
+  }): void {
+    if (typeof window === "undefined") return;
+
+    // 1. Same-tab CustomEvent
+    try {
+      window.dispatchEvent(new CustomEvent("coders_club_attendance_event", { detail: event }));
+    } catch {
+      // ignore
+    }
+
+    // 2. Cross-tab BroadcastChannel
+    try {
+      if (typeof BroadcastChannel !== "undefined") {
+        const bc = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+        bc.postMessage(event);
+        bc.close();
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
+   * Saves challenge token to persistent storage so cross-tab scan can access it.
+   */
+  private saveChallenge(token: string, challenge: { sessionId: string; expiresAt: number; consumed: boolean }): void {
+    this.activeChallenges.set(token, challenge);
+    if (typeof window !== "undefined") {
+      try {
+        const allChallenges = JSON.parse(localStorage.getItem(STORAGE_CHALLENGES_KEY) || "{}");
+        allChallenges[token] = challenge;
+        localStorage.setItem(STORAGE_CHALLENGES_KEY, JSON.stringify(allChallenges));
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  /**
+   * Retrieves challenge token from memory or persistent storage.
+   */
+  private getChallenge(token: string): { sessionId: string; expiresAt: number; consumed: boolean } | null {
+    if (this.activeChallenges.has(token)) {
+      return this.activeChallenges.get(token)!;
+    }
+    if (typeof window !== "undefined") {
+      try {
+        const allChallenges = JSON.parse(localStorage.getItem(STORAGE_CHALLENGES_KEY) || "{}");
+        if (allChallenges[token]) {
+          return allChallenges[token];
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return null;
+  }
 
   /**
    * Retrieves all attendance sessions.
    */
   async getSessions(): Promise<AttendanceSession[]> {
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
+    if (
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY &&
+      !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
+    ) {
       try {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
@@ -104,19 +235,19 @@ class AttendanceService {
           return data as AttendanceSession[];
         }
       } catch {
-        // Fallback to in-memory state while Supabase schema is deployed
+        // Fallback to local storage
       }
     }
 
-    return [...this.sessions];
+    return this.getStoredSessions();
   }
 
   /**
    * Retrieves a specific session by ID.
    */
   async getSessionById(sessionId: string): Promise<AttendanceSession | null> {
-    const session = this.sessions.find((s) => s.id === sessionId);
-    return session || null;
+    const sessions = await this.getSessions();
+    return sessions.find((s) => s.id === sessionId) || null;
   }
 
   /**
@@ -139,7 +270,10 @@ class AttendanceService {
       updatedAt: new Date().toISOString(),
     };
 
-    this.sessions.unshift(newSession);
+    const currentSessions = this.getStoredSessions();
+    const updated = [newSession, ...currentSessions];
+    this.saveStoredSessions(updated);
+    this.broadcastEvent({ type: "NEW_SESSION", session: newSession });
     return newSession;
   }
 
@@ -147,7 +281,8 @@ class AttendanceService {
    * Closes an active attendance session.
    */
   async endSession(sessionId: string): Promise<AttendanceSession> {
-    const session = this.sessions.find((s) => s.id === sessionId);
+    const sessions = this.getStoredSessions();
+    const session = sessions.find((s) => s.id === sessionId);
     if (!session) {
       throw new Error("Attendance session not found.");
     }
@@ -155,13 +290,14 @@ class AttendanceService {
     session.isActive = false;
     session.endsAt = new Date().toISOString();
     session.updatedAt = new Date().toISOString();
+    this.saveStoredSessions(sessions);
+    this.broadcastEvent({ type: "SESSION_ENDED", sessionId });
     return { ...session };
   }
 
   /**
    * Generates a secure temporary QR token for an active session.
-   * Configured validity window: EXACTLY 5 MINUTES (300,000 ms).
-   * Adheres strictly to requirements: no high-frequency (every few seconds) rotation.
+   * Validity window: EXACTLY 5 MINUTES (300,000 ms).
    */
   async generateSessionQR(sessionId: string): Promise<QRTokenData> {
     const session = await this.getSessionById(sessionId);
@@ -176,7 +312,6 @@ class AttendanceService {
     const issuedAt = Date.now();
     const expiresAtMs = issuedAt + QR_VALIDITY_MS;
 
-    // Temporary signed token seed with 5-minute expiration
     const rawPayload = JSON.stringify({
       sid: session.id,
       iat: issuedAt,
@@ -219,12 +354,11 @@ class AttendanceService {
         throw new Error("This attendance session is no longer active.");
       }
 
-      // Generate single-use challenge token valid for 5 minutes (300 seconds)
       const challengeToken = `chal-${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
       const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
       const expiresAt = Date.now() + CHALLENGE_TTL_MS;
 
-      this.activeChallenges.set(challengeToken, {
+      this.saveChallenge(challengeToken, {
         sessionId: session.id,
         expiresAt,
         consumed: false,
@@ -237,7 +371,7 @@ class AttendanceService {
         subEventName: session.subEventName,
         period: session.period,
         challengeToken,
-        expiresInSeconds: 300, // 5 minutes
+        expiresInSeconds: 300,
       };
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("expired")) {
@@ -253,22 +387,20 @@ class AttendanceService {
    * 1. Anti-replay challenge verification
    * 2. Single-use consumption
    * 3. Duplicate prevention: one record per person per applicable context
+   * 4. Multi-tab and multi-window Realtime broadcast!
    */
   async submitStudentAttendance(submission: StudentAttendanceSubmission): Promise<AttendanceRecord> {
-    // 1. Validation check
     const validation = validateStudentSubmission(submission);
     if (!validation.isValid) {
       throw new Error(validation.errors[0]);
     }
 
-    // 2. Anti-replay challenge verification
-    const challenge = this.activeChallenges.get(submission.challengeToken);
+    const challenge = this.getChallenge(submission.challengeToken);
     if (!challenge) {
       throw new Error("Security challenge token is invalid or already consumed. Please re-scan.");
     }
 
     if (Date.now() > challenge.expiresAt) {
-      this.activeChallenges.delete(submission.challengeToken);
       throw new Error("Attendance window expired (5 minutes). Please re-scan the QR code.");
     }
 
@@ -276,11 +408,12 @@ class AttendanceService {
       throw new Error("Security token has already been used. Duplicate submission blocked.");
     }
 
-    // Mark challenge as consumed immediately
+    // Mark consumed immediately
     challenge.consumed = true;
+    this.saveChallenge(submission.challengeToken, challenge);
 
-    // 3. Duplicate attendance prevention check
-    const isDuplicate = checkDuplicateAttendance(this.records, {
+    const records = this.getStoredRecords();
+    const isDuplicate = checkDuplicateAttendance(records, {
       studentRegNo: submission.studentRegNo,
     });
 
@@ -290,7 +423,6 @@ class AttendanceService {
       );
     }
 
-    // 4. Create new attendance record
     const newRecord: AttendanceRecord = {
       id: `rec-${Date.now()}`,
       sessionId: challenge.sessionId,
@@ -305,67 +437,21 @@ class AttendanceService {
       markedAt: new Date().toISOString(),
     };
 
-    this.records.unshift(newRecord);
+    const updatedRecords = [newRecord, ...records];
+    this.saveStoredRecords(updatedRecords);
+
+    // Broadcast across all open tabs, windows, and in-tab listeners!
+    this.broadcastEvent({
+      type: "NEW_RECORD",
+      sessionId: challenge.sessionId,
+      record: newRecord,
+    });
+
     return newRecord;
   }
 
   /**
-   * Retrieves all attendance records for a given session.
-   */
-  async getSessionRecords(sessionId: string): Promise<AttendanceRecord[]> {
-    return this.records.filter((r) => r.sessionId === sessionId);
-  }
-
-  /**
-   * Subscribes to live attendee changes via Supabase Realtime with fallback.
-   */
-  subscribeToLiveAttendees(
-    sessionId: string,
-    onNewRecord: (record: AttendanceRecord) => void
-  ): () => void {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
-      return () => {};
-    }
-
-    try {
-      // Dynamic require to avoid build-time static evaluation errors when env keys are unset
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { createRealtimeChannel, removeRealtimeChannel } = require("@/lib/supabase/realtime");
-      const channelName = `attendance-session-${sessionId}`;
-      const channel = createRealtimeChannel(channelName);
-
-      channel
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "attendance_records",
-            filter: `session_id=eq.${sessionId}`,
-          },
-          (payload: { new: unknown }) => {
-            if (payload.new) {
-              onNewRecord(payload.new as AttendanceRecord);
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        removeRealtimeChannel(channel);
-      };
-    } catch {
-      return () => {};
-    }
-  }
-
-  /**
-   * Manually records attendance for a student (e.g., student phone battery dead, camera glitch, no network).
-   * Authorized for Admins and Associates with attendance permission.
-   * Enforces:
-   * 1. Registration number format validation
-   * 2. Duplicate prevention (one record per student per session context)
-   * 3. Sets verificationMethod: 'manual_entry' and marks audit metadata
+   * Manually records attendance for a student (e.g. phone dead, camera issue).
    */
   async markManualAttendance(input: ManualAttendanceInput): Promise<AttendanceRecord> {
     const session = await this.getSessionById(input.sessionId);
@@ -384,8 +470,8 @@ class AttendanceService {
       throw new Error("Student name is required.");
     }
 
-    // Duplicate check
-    const isDuplicate = checkDuplicateAttendance(this.records, {
+    const records = this.getStoredRecords();
+    const isDuplicate = checkDuplicateAttendance(records, {
       studentRegNo: input.studentRegNo,
     });
 
@@ -410,13 +496,123 @@ class AttendanceService {
       markedAt: new Date().toISOString(),
     };
 
-    this.records.unshift(newRecord);
+    const updatedRecords = [newRecord, ...records];
+    this.saveStoredRecords(updatedRecords);
+
+    this.broadcastEvent({
+      type: "NEW_RECORD",
+      sessionId: input.sessionId,
+      record: newRecord,
+    });
+
     return newRecord;
   }
 
   /**
+   * Retrieves all attendance records for a given session.
+   */
+  async getSessionRecords(sessionId: string): Promise<AttendanceRecord[]> {
+    const records = this.getStoredRecords();
+    return records.filter((r) => r.sessionId === sessionId);
+  }
+
+  /**
+   * Subscribes to live attendee changes via BroadcastChannel, Storage events, CustomEvents, and Supabase Realtime.
+   */
+  subscribeToLiveAttendees(
+    sessionId: string,
+    onNewRecord: (record: AttendanceRecord) => void
+  ): () => void {
+    const unsubscribers: Array<() => void> = [];
+
+    if (typeof window !== "undefined") {
+      // 1. Same-tab CustomEvent listener
+      const handleCustomEvent = (e: Event) => {
+        const customEvent = e as CustomEvent;
+        const data = customEvent.detail;
+        if (data && data.type === "NEW_RECORD" && data.sessionId === sessionId && data.record) {
+          onNewRecord(data.record);
+        }
+      };
+      window.addEventListener("coders_club_attendance_event", handleCustomEvent);
+      unsubscribers.push(() => window.removeEventListener("coders_club_attendance_event", handleCustomEvent));
+
+      // 2. Cross-tab BroadcastChannel listener
+      if (typeof BroadcastChannel !== "undefined") {
+        const bc = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+        bc.onmessage = (event) => {
+          const data = event.data;
+          if (data && data.type === "NEW_RECORD" && data.sessionId === sessionId && data.record) {
+            onNewRecord(data.record);
+          }
+        };
+        unsubscribers.push(() => {
+          bc.close();
+        });
+      }
+
+      // 3. Storage event listener (fires when another tab updates localStorage)
+      const handleStorage = (e: StorageEvent) => {
+        if (e.key === STORAGE_RECORDS_KEY && e.newValue) {
+          try {
+            const allRecords: AttendanceRecord[] = JSON.parse(e.newValue);
+            const sessionRecords = allRecords.filter((r) => r.sessionId === sessionId);
+            if (sessionRecords.length > 0) {
+              onNewRecord(sessionRecords[0]);
+            }
+          } catch {
+            // ignore
+          }
+        }
+      };
+      window.addEventListener("storage", handleStorage);
+      unsubscribers.push(() => window.removeEventListener("storage", handleStorage));
+    }
+
+    // 4. Supabase Realtime (when live backend credentials are configured)
+    if (
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY &&
+      !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
+    ) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { createRealtimeChannel, removeRealtimeChannel } = require("@/lib/supabase/realtime");
+        const channelName = `attendance-session-${sessionId}`;
+        const channel = createRealtimeChannel(channelName);
+
+        channel
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "attendance_records",
+              filter: `session_id=eq.${sessionId}`,
+            },
+            (payload: { new: unknown }) => {
+              if (payload.new) {
+                onNewRecord(payload.new as AttendanceRecord);
+              }
+            }
+          )
+          .subscribe();
+
+        unsubscribers.push(() => {
+          removeRealtimeChannel(channel);
+        });
+      } catch {
+        // ignore
+      }
+    }
+
+    return () => {
+      unsubscribers.forEach((fn) => fn());
+    };
+  }
+
+  /**
    * Generates CSV string for attendance records in a session.
-   * Useful for college OD (On Duty) letters, faculty verification, and reporting.
    */
   async generateSessionAttendanceCSV(sessionId: string): Promise<string> {
     const session = await this.getSessionById(sessionId);
