@@ -6,6 +6,20 @@ export type AttendanceStatus = "present" | "late" | "excused";
 
 export type VerificationMethod = "qr_scan" | "manual_entry";
 
+export const DEPARTMENTS = [
+  "CSE",
+  "IT",
+  "AI&DS",
+  "AI&ML",
+  "Cyber Security",
+  "ECE",
+  "EEE",
+  "MECH",
+  "CIVIL",
+] as const;
+
+export type Department = (typeof DEPARTMENTS)[number];
+
 export interface AttendanceSession {
   id: string;
   eventId: string;

@@ -300,7 +300,9 @@ function ScanContent() {
                   >
                     <option value="CSE">CSE</option>
                     <option value="IT">IT</option>
-                    <option value="AI&DS">AI&DS</option>
+                    <option value="AI&DS">AI & DS</option>
+                    <option value="AI&ML">AI & ML</option>
+                    <option value="Cyber Security">Cyber Security</option>
                     <option value="ECE">ECE</option>
                     <option value="EEE">EEE</option>
                     <option value="MECH">MECH</option>
