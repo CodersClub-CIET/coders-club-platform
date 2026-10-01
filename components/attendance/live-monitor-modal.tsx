@@ -5,10 +5,12 @@ import { AttendanceRecord, AttendanceSession } from "@/lib/attendance/types";
 import { attendanceService } from "@/lib/attendance/attendance-service";
 import { Button } from "@/components/ui/button";
 import ManualEntryModal from "@/components/attendance/manual-entry-modal";
+import ODReportModal from "@/components/attendance/od-report-modal";
 import {
   Activity,
   CheckCircle2,
   Download,
+  FileText,
   GraduationCap,
   Radio,
   Search,
@@ -29,6 +31,7 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showManualModal, setShowManualModal] = useState(false);
+  const [showODModal, setShowODModal] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -138,6 +141,18 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                 Manual Entry
               </Button>
             )}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowODModal(true)}
+              className="text-xs font-semibold text-slate-700 gap-1.5 border-slate-200 hover:bg-slate-100"
+              title="Generate Official On-Duty (OD) Sheet for HODs/Faculty"
+            >
+              <FileText className="size-3.5 text-indigo-600" />
+              OD Report
+            </Button>
 
             <Button
               type="button"
@@ -360,6 +375,15 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
           session={session}
           onClose={() => setShowManualModal(false)}
           onRecordCreated={handleManualRecordCreated}
+        />
+      )}
+
+      {/* Official On-Duty (OD) Report Modal */}
+      {showODModal && (
+        <ODReportModal
+          session={session}
+          isOpen={showODModal}
+          onClose={() => setShowODModal(false)}
         />
       )}
     </div>

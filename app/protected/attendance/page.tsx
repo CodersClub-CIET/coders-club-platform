@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import QRDisplayModal from "@/components/attendance/qr-display-modal";
 import LiveMonitorModal from "@/components/attendance/live-monitor-modal";
 import CreateSessionModal from "@/components/attendance/create-session-modal";
+import ODReportModal from "@/components/attendance/od-report-modal";
 import {
   Activity,
   Calendar,
   CheckCircle,
   Clock,
   Download,
+  FileText,
   Plus,
   QrCode,
   Radio,
@@ -34,6 +36,7 @@ export default function AttendanceManagementPage() {
   // Modals state
   const [activeQRModalSession, setActiveQRModalSession] = useState<AttendanceSession | null>(null);
   const [activeMonitorSession, setActiveMonitorSession] = useState<AttendanceSession | null>(null);
+  const [activeODSession, setActiveODSession] = useState<AttendanceSession | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
@@ -351,6 +354,18 @@ export default function AttendanceManagementPage() {
                       <Download className="size-3.5 text-indigo-600" />
                       CSV
                     </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setActiveODSession(session)}
+                      className="text-xs font-medium text-slate-700 gap-1.5"
+                      title="Generate Official On-Duty (OD) Sheet for HODs/Faculty"
+                    >
+                      <FileText className="size-3.5 text-indigo-600" />
+                      OD Report
+                    </Button>
                   </div>
 
                   {session.isActive && (
@@ -384,6 +399,15 @@ export default function AttendanceManagementPage() {
         <LiveMonitorModal
           session={activeMonitorSession}
           onClose={() => setActiveMonitorSession(null)}
+        />
+      )}
+
+      {/* Official On-Duty (OD) Report Modal */}
+      {activeODSession && (
+        <ODReportModal
+          session={activeODSession}
+          isOpen={!!activeODSession}
+          onClose={() => setActiveODSession(null)}
         />
       )}
 
