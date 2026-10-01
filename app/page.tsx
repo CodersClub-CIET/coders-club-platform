@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   FileText,
   GraduationCap,
-  LogIn,
   QrCode,
   ShieldCheck,
   Sparkles,
@@ -36,17 +35,18 @@ export default function Home() {
 
           <div className="flex items-center gap-3">
             <Link
-              href="/attendance"
-              className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-1.5 rounded-lg transition-colors hidden sm:inline-block"
+              href="/attendance/scan"
+              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 px-3 py-1.5 rounded-lg transition-colors hidden sm:inline-flex items-center gap-1.5"
             >
-              Attendance
+              <QrCode className="size-3.5" />
+              <span>Student Scan</span>
             </Link>
             <Link
-              href="/login"
+              href="/attendance"
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/30"
             >
-              <LogIn className="size-3.5" />
-              Sign in
+              <Activity className="size-3.5" />
+              <span>Attendance Console</span>
             </Link>
           </div>
         </div>
