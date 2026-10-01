@@ -96,9 +96,11 @@ export interface StudentAttendanceSubmission {
 }
 
 export interface AssociateAttendanceSubmission {
-  sessionId: string;
+  challengeToken: string;
   associateUserId: string;
   associateName: string;
+  department: string;
+  role: string;
 }
 
 export interface ManualAttendanceInput {

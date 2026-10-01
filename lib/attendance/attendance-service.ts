@@ -1,6 +1,7 @@
 import {
   AttendanceRecord,
   AttendanceSession,
+  AssociateAttendanceSubmission,
   CreateSessionInput,
   HandshakeChallenge,
   ManualAttendanceInput,
@@ -441,6 +442,75 @@ class AttendanceService {
     this.saveStoredRecords(updatedRecords);
 
     // Broadcast across all open tabs, windows, and in-tab listeners!
+    this.broadcastEvent({
+      type: "NEW_RECORD",
+      sessionId: challenge.sessionId,
+      record: newRecord,
+    });
+
+    return newRecord;
+  }
+
+  /**
+   * Submits Associate attendance.
+   * Enforces:
+   * 1. Anti-replay challenge verification
+   * 2. Single-use consumption
+   * 3. Duplicate prevention: one record per associate per session
+   * 4. Multi-tab and multi-window Realtime broadcast
+   */
+  async submitAssociateAttendance(submission: AssociateAttendanceSubmission): Promise<AttendanceRecord> {
+    if (!submission.associateName || submission.associateName.trim().length < 2) {
+      throw new Error("Associate full name is required.");
+    }
+    if (!submission.associateUserId || submission.associateUserId.trim().length < 3) {
+      throw new Error("Associate ID / Registration Number is required.");
+    }
+
+    const challenge = this.getChallenge(submission.challengeToken);
+    if (!challenge) {
+      throw new Error("Security challenge token is invalid or already consumed. Please re-scan.");
+    }
+
+    if (Date.now() > challenge.expiresAt) {
+      throw new Error("Attendance window expired (5 minutes). Please re-scan the QR code.");
+    }
+
+    if (challenge.consumed) {
+      throw new Error("Security token has already been used. Duplicate submission blocked.");
+    }
+
+    // Mark challenge consumed
+    challenge.consumed = true;
+    this.saveChallenge(submission.challengeToken, challenge);
+
+    const records = this.getStoredRecords();
+    const isDuplicate = checkDuplicateAttendance(records, {
+      associateUserId: submission.associateUserId,
+    });
+
+    if (isDuplicate) {
+      throw new Error(
+        `Attendance for associate ${submission.associateName} (${submission.associateUserId}) has already been recorded for this session.`
+      );
+    }
+
+    const newRecord: AttendanceRecord = {
+      id: `rec-assoc-${Date.now()}`,
+      sessionId: challenge.sessionId,
+      associateUserId: submission.associateUserId.trim().toUpperCase(),
+      associateName: submission.associateName.trim(),
+      studentDepartment: submission.department,
+      attendeeType: "associate",
+      verificationMethod: "qr_scan",
+      status: "present",
+      markedBy: `${submission.role || "Associate"} (Self Scan)`,
+      markedAt: new Date().toISOString(),
+    };
+
+    const updatedRecords = [newRecord, ...records];
+    this.saveStoredRecords(updatedRecords);
+
     this.broadcastEvent({
       type: "NEW_RECORD",
       sessionId: challenge.sessionId,

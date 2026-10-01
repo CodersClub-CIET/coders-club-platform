@@ -266,7 +266,9 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                       ) : (
                         <div>
                           <div className="font-semibold text-slate-800">{record.associateName}</div>
-                          <div className="text-[11px] text-purple-600 font-medium">Associate</div>
+                          <div className="text-[11px] text-purple-600 font-mono font-medium">
+                            {record.associateUserId || "Associate"}
+                          </div>
                         </div>
                       )}
                     </td>
@@ -277,7 +279,14 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                           {record.studentDepartment} &bull; Yr {record.studentYear} ({record.studentSection})
                         </span>
                       ) : (
-                        <span className="text-slate-500">Club Executive</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-700">
+                            {record.markedBy?.replace(" (Self Scan)", "") || "Associate"}
+                          </span>
+                          {record.studentDepartment && (
+                            <span className="text-slate-500 font-medium">{record.studentDepartment}</span>
+                          )}
+                        </div>
                       )}
                     </td>
 

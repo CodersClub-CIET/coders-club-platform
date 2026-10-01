@@ -1,4 +1,5 @@
 import {
+  AssociateAttendanceSubmission,
   AttendanceRecord,
   AttendanceValidationResult,
   CreateSessionInput,
@@ -80,6 +81,40 @@ export function validateStudentSubmission(
 }
 
 /**
+ * Validates associate submission form fields on the client.
+ */
+export function validateAssociateSubmission(
+  submission: AssociateAttendanceSubmission
+): AttendanceValidationResult {
+  const errors: string[] = [];
+
+  if (!submission.challengeToken || submission.challengeToken.trim() === "") {
+    errors.push("Missing security challenge token. Please re-scan the QR code.");
+  }
+
+  if (!submission.associateUserId || submission.associateUserId.trim().length < 3) {
+    errors.push("Please enter a valid Associate ID or Registration Number (at least 3 characters).");
+  }
+
+  if (!submission.associateName || submission.associateName.trim().length < 2) {
+    errors.push("Please enter your full name.");
+  }
+
+  if (!submission.department || submission.department.trim() === "") {
+    errors.push("Please select your department.");
+  }
+
+  if (!submission.role || submission.role.trim() === "") {
+    errors.push("Please select your club role.");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
  * Checks if a student or associate has already recorded attendance in the given session records.
  * Provides client-side instant detection, while the server enforces the definitive DB unique constraint.
  */
@@ -97,12 +132,14 @@ export function checkDuplicateAttendance(
   }
 
   if (identifier.associateUserId) {
+    const targetAssoc = identifier.associateUserId.trim().toLowerCase();
     return records.some(
       (r) =>
-        r.associateUserId === identifier.associateUserId &&
+        r.associateUserId?.trim().toLowerCase() === targetAssoc &&
         r.attendeeType === "associate"
     );
   }
 
   return false;
 }
+
