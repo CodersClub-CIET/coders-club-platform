@@ -13,6 +13,7 @@ import CreateSessionModal from "@/components/attendance/create-session-modal";
 import ODReportModal from "@/components/attendance/od-report-modal";
 import AttendanceAnalyticsView from "@/components/attendance/attendance-analytics-view";
 import StudentLookupView from "@/components/attendance/student-lookup-view";
+import DatabaseStatusBanner from "@/components/attendance/database-status-banner";
 import {
   Activity,
   BarChart3,
@@ -166,6 +167,10 @@ export default function AttendanceManagementPage() {
 
         {/* Content Container */}
         <div className="px-4 sm:px-6 lg:px-8 pb-10">
+          <div className="max-w-7xl mx-auto">
+            <DatabaseStatusBanner />
+          </div>
+
           {/* Top Banner */}
           <div className="max-w-7xl mx-auto mb-6">
             <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl">

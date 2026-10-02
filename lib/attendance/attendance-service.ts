@@ -143,6 +143,77 @@ class AttendanceService {
   }
 
   /**
+   * Performs an instant health check on Supabase database connectivity
+   * and verifies whether required tables exist in schema cache.
+   */
+  async checkDatabaseHealth(): Promise<{
+    configured: boolean;
+    connected: boolean;
+    tablesExist: boolean;
+    missingTables: string[];
+    error?: string;
+  }> {
+    if (!this.isSupabaseConfigured()) {
+      return {
+        configured: false,
+        connected: false,
+        tablesExist: false,
+        missingTables: ["attendance_sessions", "attendance_records"],
+        error: "Supabase environment variables (URL/Publishable Key) are not configured.",
+      };
+    }
+
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const missing: string[] = [];
+
+      const { error: sessError } = await supabase
+        .from("attendance_sessions")
+        .select("id")
+        .limit(1);
+
+      if (sessError && (sessError.code === "PGRST205" || sessError.message?.includes("Could not find the table"))) {
+        missing.push("attendance_sessions");
+      }
+
+      const { error: recError } = await supabase
+        .from("attendance_records")
+        .select("id")
+        .limit(1);
+
+      if (recError && (recError.code === "PGRST205" || recError.message?.includes("Could not find the table"))) {
+        missing.push("attendance_records");
+      }
+
+      if (missing.length > 0) {
+        return {
+          configured: true,
+          connected: true,
+          tablesExist: false,
+          missingTables: missing,
+          error: `Missing database tables: ${missing.join(", ")}. Please execute the SQL migration in Supabase SQL Editor.`,
+        };
+      }
+
+      return {
+        configured: true,
+        connected: true,
+        tablesExist: true,
+        missingTables: [],
+      };
+    } catch (err: unknown) {
+      return {
+        configured: true,
+        connected: false,
+        tablesExist: false,
+        missingTables: ["attendance_sessions", "attendance_records"],
+        error: err instanceof Error ? err.message : "Failed to connect to Supabase backend.",
+      };
+    }
+  }
+
+  /**
    * Checks database directly for existing record to prevent duplicate student and coordinator submissions.
    */
   async checkDuplicateInDatabase(
@@ -641,6 +712,29 @@ class AttendanceService {
       try {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
+
+        // 1. Ensure parent session exists in attendance_sessions to satisfy foreign key constraint
+        try {
+          const currentSession = await this.getSessionById(challenge.sessionId);
+          await supabase.from("attendance_sessions").upsert(
+            {
+              id: challenge.sessionId,
+              event_id: currentSession?.eventId || "evt-01",
+              event_name: currentSession?.eventName || "CIET Coders Club Event",
+              sub_event_id: currentSession?.subEventId || null,
+              sub_event_name: currentSession?.subEventName || null,
+              period: currentSession?.period || "morning",
+              session_name: currentSession?.sessionName || "Attendance Session",
+              is_active: currentSession ? currentSession.isActive : true,
+              starts_at: currentSession?.startsAt || new Date().toISOString(),
+            },
+            { onConflict: "id", ignoreDuplicates: true }
+          );
+        } catch (sessUpsertErr) {
+          console.warn("Auto session upsert notice:", sessUpsertErr);
+        }
+
+        // 2. Insert attendance record into Supabase
         const { error } = await supabase.from("attendance_records").insert({
           id: newRecord.id,
           session_id: challenge.sessionId,
@@ -654,11 +748,26 @@ class AttendanceService {
           status: "present",
           marked_at: newRecord.markedAt,
         });
+
         if (error) {
           console.error("Supabase student record insert error:", error);
+          if (error.code === "PGRST205" || error.message?.includes("Could not find the table")) {
+            throw new Error(
+              "Cloud Database Incomplete: Supabase table 'attendance_records' does not exist yet. Please ask the coordinator to run the SQL migration in Supabase SQL Editor."
+            );
+          }
+          if (error.code === "23505") {
+            throw new Error(
+              `Duplicate Check-in: Attendance for registration number ${newRecord.studentRegNo} has already been recorded.`
+            );
+          }
+          throw new Error(`Cloud Database Error: ${error.message}`);
         }
-      } catch (err) {
-        console.warn("Supabase student record insert fallback to local storage:", err);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error("Failed to persist attendance record to central server.");
       }
     }
 
@@ -907,6 +1016,29 @@ class AttendanceService {
       try {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
+
+        // 1. Ensure parent session exists in attendance_sessions
+        try {
+          const currentSession = await this.getSessionById(input.sessionId);
+          await supabase.from("attendance_sessions").upsert(
+            {
+              id: input.sessionId,
+              event_id: currentSession?.eventId || "evt-01",
+              event_name: currentSession?.eventName || "CIET Coders Club Event",
+              sub_event_id: currentSession?.subEventId || null,
+              sub_event_name: currentSession?.subEventName || null,
+              period: currentSession?.period || "morning",
+              session_name: currentSession?.sessionName || "Attendance Session",
+              is_active: currentSession ? currentSession.isActive : true,
+              starts_at: currentSession?.startsAt || new Date().toISOString(),
+            },
+            { onConflict: "id", ignoreDuplicates: true }
+          );
+        } catch (sessUpsertErr) {
+          console.warn("Auto session upsert notice:", sessUpsertErr);
+        }
+
+        // 2. Insert record
         const { error } = await supabase.from("attendance_records").insert({
           id: newRecord.id,
           session_id: input.sessionId,
@@ -921,10 +1053,25 @@ class AttendanceService {
           marked_by: newRecord.markedBy,
           marked_at: newRecord.markedAt,
         });
+
         if (error) {
           console.error("Supabase student manual insert error:", error);
+          if (error.code === "PGRST205" || error.message?.includes("Could not find the table")) {
+            throw new Error(
+              "Cloud Database Incomplete: Supabase table 'attendance_records' does not exist yet. Please run the SQL migration in Supabase SQL Editor."
+            );
+          }
+          if (error.code === "23505") {
+            throw new Error(
+              `Duplicate Check-in: Attendance for registration number ${newRecord.studentRegNo} has already been recorded.`
+            );
+          }
+          throw new Error(`Cloud Database Error: ${error.message}`);
         }
-      } catch (err) {
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          throw err;
+        }
         console.warn("Supabase student manual insert fallback:", err);
       }
     }
