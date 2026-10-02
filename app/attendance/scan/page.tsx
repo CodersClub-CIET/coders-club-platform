@@ -100,6 +100,8 @@ function ScanContent() {
       setLoading(true);
       setError(null);
       setNoActiveSessions(false);
+      setSuccessRecord(null);
+      setDeviceSubmission(null);
 
       let targetSessionId = "";
 
@@ -112,19 +114,38 @@ function ScanContent() {
           setSelectedSessionId(challenge.sessionId);
           targetSessionId = challenge.sessionId;
 
-          // Check if this device already submitted for this session
+          // Check if this device already submitted for THIS session
           const existingLock = checkDeviceLock(challenge.sessionId);
           if (existingLock) {
             setDeviceSubmission(existingLock);
           } else {
             setDeviceSubmission(null);
+            // Pre-fill profile from previous submission on this device if available
+            try {
+              const saved = localStorage.getItem("coders_club_last_student_profile");
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                setStudentForm((prev) => ({
+                  ...prev,
+                  studentRegNo: parsed.studentRegNo || prev.studentRegNo,
+                  studentName: parsed.studentName || prev.studentName,
+                  department: parsed.department || prev.department,
+                  year: parsed.year || prev.year,
+                  section: parsed.section || prev.section,
+                }));
+              }
+            } catch {
+              // ignore
+            }
           }
 
           setLoading(false);
           return;
         } catch (err: unknown) {
-          console.warn("QR Token verification fallback to active session:", err);
+          console.error("QR Token verification error:", err);
           setError(err instanceof Error ? err.message : "QR token expired or invalid.");
+          setLoading(false);
+          return;
         }
       }
 
@@ -280,6 +301,16 @@ function ScanContent() {
         localStorage.setItem(
           `coders_club_device_attendance_${handshake.sessionId}`,
           JSON.stringify(deviceRecord)
+        );
+        localStorage.setItem(
+          "coders_club_last_student_profile",
+          JSON.stringify({
+            studentRegNo: deviceRecord.studentRegNo,
+            studentName: deviceRecord.studentName,
+            department: deviceRecord.department,
+            year: deviceRecord.year,
+            section: deviceRecord.section,
+          })
         );
       } catch {
         // ignore storage errors

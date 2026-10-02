@@ -535,6 +535,9 @@ class AttendanceService {
 
     const rawPayload = JSON.stringify({
       sid: session.id,
+      name: session.sessionName,
+      event: session.eventName,
+      sub: session.subEventName || "",
       iat: issuedAt,
       exp: expiresAtMs,
       p: session.period,
@@ -559,8 +562,8 @@ class AttendanceService {
   /**
    * Performs the anti-replay handshake when a student or coordinator scans the QR URL.
    * 1. Validates that the 5-minute QR code has not expired.
-   * 2. Generates a single-use challenge token valid for 5 minutes (300 seconds).
-   * 3. Retains whether this is a participant or coordinator scan.
+   * 2. Self-contained: reconciles session data from QR payload even if phone hasn't fetched network sessions.
+   * 3. Generates a single-use challenge token valid for 5 minutes (300 seconds).
    */
   async performHandshake(token: string): Promise<HandshakeChallenge> {
     try {
@@ -574,7 +577,49 @@ class AttendanceService {
         );
       }
 
-      const session = await this.getSessionById(payload.sid);
+      let session = await this.getSessionById(payload.sid);
+
+      // If not in cache/local store, query Supabase directly
+      if (!session && this.isSupabaseConfigured()) {
+        try {
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("attendance_sessions")
+            .select("*")
+            .eq("id", payload.sid)
+            .single();
+          if (data) {
+            session = mapDbSessionToAttendanceSession(data);
+            const current = this.getStoredSessions();
+            this.saveStoredSessions([session, ...current.filter((s) => s.id !== session!.id)]);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // If still not found, construct self-contained session from signed QR payload
+      if (!session && payload.sid) {
+        session = {
+          id: payload.sid,
+          eventId: "evt-01",
+          eventName: payload.event || "CIET Coders Club Event",
+          subEventName: payload.sub || undefined,
+          period: payload.p || "morning",
+          sessionName: payload.name || "Attendance Session",
+          createdBy: "admin",
+          isActive: true,
+          startsAt: new Date(payload.iat || Date.now()).toISOString(),
+          createdAt: new Date(payload.iat || Date.now()).toISOString(),
+          updatedAt: new Date(payload.iat || Date.now()).toISOString(),
+        };
+        const current = this.getStoredSessions();
+        if (!current.some((s) => s.id === session!.id)) {
+          this.saveStoredSessions([session, ...current]);
+        }
+      }
+
       if (!session || !session.isActive) {
         throw new Error("This attendance session is no longer active.");
       }
@@ -602,7 +647,7 @@ class AttendanceService {
         targetAttendeeType,
       };
     } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes("expired")) {
+      if (err instanceof Error && (err.message.includes("expired") || err.message.includes("active"))) {
         throw err;
       }
       throw new Error("Invalid or corrupted QR attendance token.");
