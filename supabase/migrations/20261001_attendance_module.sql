@@ -9,15 +9,16 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- 2. Create Attendance Sessions Table
+-- Note: id is TEXT PRIMARY KEY to accommodate both UUIDs and prefixed session IDs (e.g. sess-101, sess-timestamp)
 CREATE TABLE IF NOT EXISTS public.attendance_sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_id UUID NULL,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    event_id TEXT NULL DEFAULT 'evt-01',
     event_name TEXT NOT NULL,
-    sub_event_id UUID NULL,
+    sub_event_id TEXT NULL,
     sub_event_name TEXT NULL,
     period TEXT NOT NULL CHECK (period IN ('morning', 'afternoon')),
     session_name TEXT NOT NULL,
-    created_by UUID NULL,
+    created_by TEXT NULL,
     created_by_name TEXT NULL DEFAULT 'Coordinator',
     is_active BOOLEAN NOT NULL DEFAULT true,
     qr_secret_seed TEXT NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
@@ -32,8 +33,8 @@ CREATE INDEX IF NOT EXISTS idx_attendance_sessions_period ON public.attendance_s
 
 -- 3. Create Attendance Records Table
 CREATE TABLE IF NOT EXISTS public.attendance_records (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id UUID NOT NULL REFERENCES public.attendance_sessions(id) ON DELETE CASCADE,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    session_id TEXT NOT NULL REFERENCES public.attendance_sessions(id) ON DELETE CASCADE,
     student_reg_no TEXT NULL,
     student_name TEXT NULL,
     student_department TEXT NULL,
@@ -63,8 +64,8 @@ CREATE INDEX IF NOT EXISTS idx_attendance_records_associate ON public.attendance
 
 -- 4. Create Anti-Replay Challenge Table (5-minute TTL)
 CREATE TABLE IF NOT EXISTS public.attendance_challenges (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id UUID NOT NULL REFERENCES public.attendance_sessions(id) ON DELETE CASCADE,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    session_id TEXT NOT NULL REFERENCES public.attendance_sessions(id) ON DELETE CASCADE,
     challenge_token TEXT NOT NULL UNIQUE,
     is_consumed BOOLEAN NOT NULL DEFAULT false,
     consumed_at TIMESTAMPTZ NULL,
@@ -98,47 +99,88 @@ ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance_challenges ENABLE ROW LEVEL SECURITY;
 
 -- 7. RLS Policies
--- Sessions: viewable by authenticated coordinators and mobile scanners
+-- Sessions: viewable, insertable, updatable, deletable by admin and mobile scanners
+DROP POLICY IF EXISTS "attendance_sessions_select_policy" ON public.attendance_sessions;
 CREATE POLICY "attendance_sessions_select_policy"
 ON public.attendance_sessions FOR SELECT
 TO anon, authenticated
 USING (true);
 
+DROP POLICY IF EXISTS "attendance_sessions_insert_policy" ON public.attendance_sessions;
 CREATE POLICY "attendance_sessions_insert_policy"
 ON public.attendance_sessions FOR INSERT
 TO anon, authenticated
 WITH CHECK (true);
 
+DROP POLICY IF EXISTS "attendance_sessions_update_policy" ON public.attendance_sessions;
 CREATE POLICY "attendance_sessions_update_policy"
 ON public.attendance_sessions FOR UPDATE
 TO anon, authenticated
 USING (true);
 
--- Records: viewable and insertable
+DROP POLICY IF EXISTS "attendance_sessions_delete_policy" ON public.attendance_sessions;
+CREATE POLICY "attendance_sessions_delete_policy"
+ON public.attendance_sessions FOR DELETE
+TO anon, authenticated
+USING (true);
+
+-- Records: viewable and insertable for both public mobile scans and admin
+DROP POLICY IF EXISTS "attendance_records_select_policy" ON public.attendance_records;
 CREATE POLICY "attendance_records_select_policy"
 ON public.attendance_records FOR SELECT
 TO anon, authenticated
 USING (true);
 
+DROP POLICY IF EXISTS "attendance_records_insert_policy" ON public.attendance_records;
 CREATE POLICY "attendance_records_insert_policy"
 ON public.attendance_records FOR INSERT
 TO anon, authenticated
 WITH CHECK (true);
 
+DROP POLICY IF EXISTS "attendance_records_update_policy" ON public.attendance_records;
+CREATE POLICY "attendance_records_update_policy"
+ON public.attendance_records FOR UPDATE
+TO anon, authenticated
+USING (true);
+
+DROP POLICY IF EXISTS "attendance_records_delete_policy" ON public.attendance_records;
+CREATE POLICY "attendance_records_delete_policy"
+ON public.attendance_records FOR DELETE
+TO anon, authenticated
+USING (true);
+
 -- Challenges: 5-minute single-use handshake tokens
+DROP POLICY IF EXISTS "attendance_challenges_select_policy" ON public.attendance_challenges;
 CREATE POLICY "attendance_challenges_select_policy"
 ON public.attendance_challenges FOR SELECT
 TO anon, authenticated
 USING (true);
 
+DROP POLICY IF EXISTS "attendance_challenges_insert_policy" ON public.attendance_challenges;
 CREATE POLICY "attendance_challenges_insert_policy"
 ON public.attendance_challenges FOR INSERT
 TO anon, authenticated
 WITH CHECK (true);
 
+DROP POLICY IF EXISTS "attendance_challenges_update_policy" ON public.attendance_challenges;
 CREATE POLICY "attendance_challenges_update_policy"
 ON public.attendance_challenges FOR UPDATE
 TO anon, authenticated
 USING (true);
+
+-- 8. Seed Default Active Session (sess-101) so QR codes and scans connect immediately
+INSERT INTO public.attendance_sessions (
+    id, event_id, event_name, sub_event_name, period, session_name, is_active, starts_at, created_by_name
+) VALUES (
+    'sess-101',
+    'evt-01',
+    'Full Stack Web Development Hackathon',
+    'Round 1: Rapid Prototyping',
+    'morning',
+    'Morning Attendance - Day 1',
+    true,
+    now() - interval '1 hour',
+    'Gowtham R (Admin)'
+) ON CONFLICT (id) DO UPDATE SET is_active = true;
 
 -- End of migration

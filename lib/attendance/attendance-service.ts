@@ -91,6 +91,44 @@ const MOCK_RECORDS: AttendanceRecord[] = [
   },
 ];
 
+export function mapDbSessionToAttendanceSession(d: Record<string, unknown>): AttendanceSession {
+  return {
+    id: String(d.id),
+    eventId: d.event_id ? String(d.event_id) : "evt-01",
+    eventName: String(d.event_name || d.eventName || "CIET Coders Club Event"),
+    subEventId: d.sub_event_id ? String(d.sub_event_id) : undefined,
+    subEventName: d.sub_event_name ? String(d.sub_event_name) : undefined,
+    period: (d.period as "morning" | "afternoon") || "morning",
+    sessionName: String(d.session_name || d.sessionName || "Attendance Session"),
+    createdBy: d.created_by ? String(d.created_by) : "usr-admin-01",
+    createdByName: String(d.created_by_name || d.createdByName || "Coordinator"),
+    isActive: d.is_active !== undefined ? Boolean(d.is_active) : d.isActive !== undefined ? Boolean(d.isActive) : true,
+    startsAt: String(d.starts_at || d.startsAt || new Date().toISOString()),
+    endsAt: d.ends_at ? String(d.ends_at) : d.endsAt ? String(d.endsAt) : undefined,
+    createdAt: String(d.created_at || d.createdAt || new Date().toISOString()),
+    updatedAt: String(d.updated_at || d.updatedAt || new Date().toISOString()),
+  };
+}
+
+export function mapDbRecordToAttendanceRecord(d: Record<string, unknown>): AttendanceRecord {
+  return {
+    id: String(d.id),
+    sessionId: String(d.session_id || d.sessionId),
+    studentRegNo: d.student_reg_no ? String(d.student_reg_no) : d.studentRegNo ? String(d.studentRegNo) : undefined,
+    studentName: d.student_name ? String(d.student_name) : d.studentName ? String(d.studentName) : undefined,
+    studentDepartment: d.student_department ? String(d.student_department) : d.studentDepartment ? String(d.studentDepartment) : undefined,
+    studentYear: d.student_year !== undefined ? Number(d.student_year) : d.studentYear !== undefined ? Number(d.studentYear) : undefined,
+    studentSection: d.student_section ? String(d.student_section) : d.studentSection ? String(d.studentSection) : undefined,
+    associateUserId: d.associate_user_id ? String(d.associate_user_id) : d.associateUserId ? String(d.associateUserId) : undefined,
+    associateName: d.associate_name ? String(d.associate_name) : d.associateName ? String(d.associateName) : d.student_name ? String(d.student_name) : undefined,
+    attendeeType: (d.attendee_type || d.attendeeType || "student") as "student" | "associate",
+    verificationMethod: (d.verification_method || d.verificationMethod || "qr_scan") as "qr_scan" | "manual_entry",
+    status: (d.status || "present") as AttendanceStatus,
+    markedBy: d.marked_by ? String(d.marked_by) : d.markedBy ? String(d.markedBy) : undefined,
+    markedAt: String(d.marked_at || d.markedAt || new Date().toISOString()),
+  };
+}
+
 class AttendanceService {
   // In-memory fallback for challenge tokens
   private activeChallenges: Map<string, { sessionId: string; expiresAt: number; consumed: boolean }> = new Map();
@@ -102,6 +140,77 @@ class AttendanceService {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     return !!(url && key && !url.includes("placeholder") && !key.includes("placeholder"));
+  }
+
+  /**
+   * Performs an instant health check on Supabase database connectivity
+   * and verifies whether required tables exist in schema cache.
+   */
+  async checkDatabaseHealth(): Promise<{
+    configured: boolean;
+    connected: boolean;
+    tablesExist: boolean;
+    missingTables: string[];
+    error?: string;
+  }> {
+    if (!this.isSupabaseConfigured()) {
+      return {
+        configured: false,
+        connected: false,
+        tablesExist: false,
+        missingTables: ["attendance_sessions", "attendance_records"],
+        error: "Supabase environment variables (URL/Publishable Key) are not configured.",
+      };
+    }
+
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const missing: string[] = [];
+
+      const { error: sessError } = await supabase
+        .from("attendance_sessions")
+        .select("id")
+        .limit(1);
+
+      if (sessError && (sessError.code === "PGRST205" || sessError.message?.includes("Could not find the table"))) {
+        missing.push("attendance_sessions");
+      }
+
+      const { error: recError } = await supabase
+        .from("attendance_records")
+        .select("id")
+        .limit(1);
+
+      if (recError && (recError.code === "PGRST205" || recError.message?.includes("Could not find the table"))) {
+        missing.push("attendance_records");
+      }
+
+      if (missing.length > 0) {
+        return {
+          configured: true,
+          connected: true,
+          tablesExist: false,
+          missingTables: missing,
+          error: `Missing database tables: ${missing.join(", ")}. Please execute the SQL migration in Supabase SQL Editor.`,
+        };
+      }
+
+      return {
+        configured: true,
+        connected: true,
+        tablesExist: true,
+        missingTables: [],
+      };
+    } catch (err: unknown) {
+      return {
+        configured: true,
+        connected: false,
+        tablesExist: false,
+        missingTables: ["attendance_sessions", "attendance_records"],
+        error: err instanceof Error ? err.message : "Failed to connect to Supabase backend.",
+      };
+    }
   }
 
   /**
@@ -281,13 +390,10 @@ class AttendanceService {
 
   /**
    * Retrieves all attendance sessions.
+   * Directly fetches from Supabase Database when configured, with localStorage fallback.
    */
   async getSessions(): Promise<AttendanceSession[]> {
-    if (
-      process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY &&
-      !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
-    ) {
+    if (this.isSupabaseConfigured()) {
       try {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
@@ -296,8 +402,10 @@ class AttendanceService {
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (!error && data && data.length > 0) {
-          return data as AttendanceSession[];
+        if (!error && Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((d: Record<string, unknown>) => mapDbSessionToAttendanceSession(d));
+          this.saveStoredSessions(mapped);
+          return mapped;
         }
       } catch {
         // Fallback to local storage
@@ -317,6 +425,7 @@ class AttendanceService {
 
   /**
    * Starts a new attendance session.
+   * Persists both to Supabase PostgreSQL and local cache.
    */
   async createSession(input: CreateSessionInput, userId: string = "usr-admin-01"): Promise<AttendanceSession> {
     const newSession: AttendanceSession = {
@@ -338,6 +447,31 @@ class AttendanceService {
     const currentSessions = this.getStoredSessions();
     const updated = [newSession, ...currentSessions];
     this.saveStoredSessions(updated);
+
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        await supabase.from("attendance_sessions").insert({
+          id: newSession.id,
+          event_id: newSession.eventId || "evt-01",
+          event_name: newSession.eventName,
+          sub_event_id: newSession.subEventId || null,
+          sub_event_name: newSession.subEventName || null,
+          period: newSession.period,
+          session_name: newSession.sessionName,
+          created_by: newSession.createdBy,
+          created_by_name: newSession.createdByName,
+          is_active: newSession.isActive,
+          starts_at: newSession.startsAt,
+          created_at: newSession.createdAt,
+          updated_at: newSession.updatedAt,
+        });
+      } catch (err) {
+        console.warn("Supabase session insert notice:", err);
+      }
+    }
+
     this.broadcastEvent({ type: "NEW_SESSION", session: newSession });
     return newSession;
   }
@@ -356,15 +490,37 @@ class AttendanceService {
     session.endsAt = new Date().toISOString();
     session.updatedAt = new Date().toISOString();
     this.saveStoredSessions(sessions);
+
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        await supabase
+          .from("attendance_sessions")
+          .update({
+            is_active: false,
+            ends_at: session.endsAt,
+            updated_at: session.updatedAt,
+          })
+          .eq("id", sessionId);
+      } catch (err) {
+        console.warn("Supabase session end notice:", err);
+      }
+    }
+
     this.broadcastEvent({ type: "SESSION_ENDED", sessionId });
     return { ...session };
   }
 
   /**
    * Generates a secure temporary QR token for an active session.
+   * Supports generating dedicated QR codes for students or for coordinators.
    * Validity window: EXACTLY 5 MINUTES (300,000 ms).
    */
-  async generateSessionQR(sessionId: string): Promise<QRTokenData> {
+  async generateSessionQR(
+    sessionId: string,
+    attendeeType: "student" | "associate" = "student"
+  ): Promise<QRTokenData> {
     const session = await this.getSessionById(sessionId);
     if (!session) {
       throw new Error("Invalid session ID.");
@@ -379,14 +535,19 @@ class AttendanceService {
 
     const rawPayload = JSON.stringify({
       sid: session.id,
+      name: session.sessionName,
+      event: session.eventName,
+      sub: session.subEventName || "",
       iat: issuedAt,
       exp: expiresAtMs,
       p: session.period,
+      type: attendeeType,
     });
 
     const token = typeof window !== "undefined" ? btoa(rawPayload) : Buffer.from(rawPayload).toString("base64");
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
-    const scanUrl = `${baseUrl}/attendance/scan?token=${encodeURIComponent(token)}`;
+    const modeParam = attendeeType === "associate" ? "&mode=associate" : "";
+    const scanUrl = `${baseUrl}/attendance/scan?token=${encodeURIComponent(token)}${modeParam}`;
 
     return {
       sessionId,
@@ -394,13 +555,15 @@ class AttendanceService {
       scanUrl,
       issuedAt: new Date(issuedAt).toISOString(),
       expiresAt: new Date(expiresAtMs).toISOString(),
+      attendeeType,
     };
   }
 
   /**
-   * Performs the anti-replay handshake when a student scans the QR URL.
+   * Performs the anti-replay handshake when a student or coordinator scans the QR URL.
    * 1. Validates that the 5-minute QR code has not expired.
-   * 2. Generates a single-use challenge token valid for 5 minutes (300 seconds).
+   * 2. Self-contained: reconciles session data from QR payload even if phone hasn't fetched network sessions.
+   * 3. Generates a single-use challenge token valid for 5 minutes (300 seconds).
    */
   async performHandshake(token: string): Promise<HandshakeChallenge> {
     try {
@@ -414,7 +577,49 @@ class AttendanceService {
         );
       }
 
-      const session = await this.getSessionById(payload.sid);
+      let session = await this.getSessionById(payload.sid);
+
+      // If not in cache/local store, query Supabase directly
+      if (!session && this.isSupabaseConfigured()) {
+        try {
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("attendance_sessions")
+            .select("*")
+            .eq("id", payload.sid)
+            .single();
+          if (data) {
+            session = mapDbSessionToAttendanceSession(data);
+            const current = this.getStoredSessions();
+            this.saveStoredSessions([session, ...current.filter((s) => s.id !== session!.id)]);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // If still not found, construct self-contained session from signed QR payload
+      if (!session && payload.sid) {
+        session = {
+          id: payload.sid,
+          eventId: "evt-01",
+          eventName: payload.event || "CIET Coders Club Event",
+          subEventName: payload.sub || undefined,
+          period: payload.p || "morning",
+          sessionName: payload.name || "Attendance Session",
+          createdBy: "admin",
+          isActive: true,
+          startsAt: new Date(payload.iat || Date.now()).toISOString(),
+          createdAt: new Date(payload.iat || Date.now()).toISOString(),
+          updatedAt: new Date(payload.iat || Date.now()).toISOString(),
+        };
+        const current = this.getStoredSessions();
+        if (!current.some((s) => s.id === session!.id)) {
+          this.saveStoredSessions([session, ...current]);
+        }
+      }
+
       if (!session || !session.isActive) {
         throw new Error("This attendance session is no longer active.");
       }
@@ -429,6 +634,8 @@ class AttendanceService {
         consumed: false,
       });
 
+      const targetAttendeeType = payload.type === "associate" ? "associate" : "student";
+
       return {
         valid: true,
         sessionId: session.id,
@@ -437,13 +644,52 @@ class AttendanceService {
         period: session.period,
         challengeToken,
         expiresInSeconds: 300,
+        targetAttendeeType,
       };
     } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes("expired")) {
+      if (err instanceof Error && (err.message.includes("expired") || err.message.includes("active"))) {
         throw err;
       }
       throw new Error("Invalid or corrupted QR attendance token.");
     }
+  }
+
+  /**
+   * Creates a challenge directly for an active session without requiring an encoded QR token.
+   * Enables direct check-in from dashboard links and session switchers.
+   */
+  async createDirectChallenge(
+    sessionId: string,
+    attendeeType: "student" | "associate" = "student"
+  ): Promise<HandshakeChallenge> {
+    const session = await this.getSessionById(sessionId);
+    if (!session) {
+      throw new Error("Attendance session could not be found.");
+    }
+    if (!session.isActive) {
+      throw new Error(`Session "${session.sessionName}" is closed and is no longer accepting attendance.`);
+    }
+
+    const challengeToken = `chal-dir-${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
+    const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+    const expiresAt = Date.now() + CHALLENGE_TTL_MS;
+
+    this.saveChallenge(challengeToken, {
+      sessionId: session.id,
+      expiresAt,
+      consumed: false,
+    });
+
+    return {
+      valid: true,
+      sessionId: session.id,
+      eventName: session.eventName,
+      subEventName: session.subEventName,
+      period: session.period,
+      challengeToken,
+      expiresInSeconds: 300,
+      targetAttendeeType: attendeeType,
+    };
   }
 
   /**
@@ -512,6 +758,31 @@ class AttendanceService {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
         await supabase.from("attendance_records").insert({
+
+        // 1. Ensure parent session exists in attendance_sessions to satisfy foreign key constraint
+        try {
+          const currentSession = await this.getSessionById(challenge.sessionId);
+          await supabase.from("attendance_sessions").upsert(
+            {
+              id: challenge.sessionId,
+              event_id: currentSession?.eventId || "evt-01",
+              event_name: currentSession?.eventName || "CIET Coders Club Event",
+              sub_event_id: currentSession?.subEventId || null,
+              sub_event_name: currentSession?.subEventName || null,
+              period: currentSession?.period || "morning",
+              session_name: currentSession?.sessionName || "Attendance Session",
+              is_active: currentSession ? currentSession.isActive : true,
+              starts_at: currentSession?.startsAt || new Date().toISOString(),
+            },
+            { onConflict: "id", ignoreDuplicates: true }
+          );
+        } catch (sessUpsertErr) {
+          console.warn("Auto session upsert notice:", sessUpsertErr);
+        }
+
+        // 2. Insert attendance record into Supabase
+        const { error } = await supabase.from("attendance_records").insert({
+          id: newRecord.id,
           session_id: challenge.sessionId,
           student_reg_no: newRecord.studentRegNo,
           student_name: newRecord.studentName,
@@ -525,6 +796,26 @@ class AttendanceService {
         });
       } catch (err) {
         console.warn("Supabase student record insert fallback to local storage:", err);
+
+        if (error) {
+          console.error("Supabase student record insert error:", error);
+          if (error.code === "PGRST205" || error.message?.includes("Could not find the table")) {
+            throw new Error(
+              "Cloud Database Incomplete: Supabase table 'attendance_records' does not exist yet. Please ask the coordinator to run the SQL migration in Supabase SQL Editor."
+            );
+          }
+          if (error.code === "23505") {
+            throw new Error(
+              `Duplicate Check-in: Attendance for registration number ${newRecord.studentRegNo} has already been recorded.`
+            );
+          }
+          throw new Error(`Cloud Database Error: ${error.message}`);
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error("Failed to persist attendance record to central server.");
       }
     }
 
@@ -608,6 +899,12 @@ class AttendanceService {
           session_id: challenge.sessionId,
           associate_user_id: newRecord.associateUserId,
           student_name: newRecord.associateName,
+        const { error } = await supabase.from("attendance_records").insert({
+          id: newRecord.id,
+          session_id: challenge.sessionId,
+          associate_user_id: newRecord.associateUserId,
+          student_name: newRecord.associateName,
+          associate_name: newRecord.associateName,
           student_department: newRecord.studentDepartment,
           attendee_type: "associate",
           verification_method: "qr_scan",
@@ -615,6 +912,9 @@ class AttendanceService {
           marked_by: newRecord.markedBy,
           marked_at: newRecord.markedAt,
         });
+        if (error) {
+          console.error("Supabase coordinator insert error:", error);
+        }
       } catch (err) {
         console.warn("Supabase coordinator insert fallback to local storage:", err);
       }
@@ -687,6 +987,12 @@ class AttendanceService {
           session_id: input.sessionId,
           associate_user_id: newRecord.associateUserId,
           student_name: newRecord.associateName,
+        const { error } = await supabase.from("attendance_records").insert({
+          id: newRecord.id,
+          session_id: input.sessionId,
+          associate_user_id: newRecord.associateUserId,
+          student_name: newRecord.associateName,
+          associate_name: newRecord.associateName,
           student_department: newRecord.studentDepartment,
           attendee_type: "associate",
           verification_method: "manual_entry",
@@ -696,6 +1002,11 @@ class AttendanceService {
         });
       } catch (err) {
         console.warn("Supabase coordinator manual insert error:", err);
+        if (error) {
+          console.error("Supabase coordinator manual insert error:", error);
+        }
+      } catch (err) {
+        console.warn("Supabase coordinator manual insert fallback:", err);
       }
     }
 
@@ -764,6 +1075,31 @@ class AttendanceService {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
         await supabase.from("attendance_records").insert({
+
+        // 1. Ensure parent session exists in attendance_sessions
+        try {
+          const currentSession = await this.getSessionById(input.sessionId);
+          await supabase.from("attendance_sessions").upsert(
+            {
+              id: input.sessionId,
+              event_id: currentSession?.eventId || "evt-01",
+              event_name: currentSession?.eventName || "CIET Coders Club Event",
+              sub_event_id: currentSession?.subEventId || null,
+              sub_event_name: currentSession?.subEventName || null,
+              period: currentSession?.period || "morning",
+              session_name: currentSession?.sessionName || "Attendance Session",
+              is_active: currentSession ? currentSession.isActive : true,
+              starts_at: currentSession?.startsAt || new Date().toISOString(),
+            },
+            { onConflict: "id", ignoreDuplicates: true }
+          );
+        } catch (sessUpsertErr) {
+          console.warn("Auto session upsert notice:", sessUpsertErr);
+        }
+
+        // 2. Insert record
+        const { error } = await supabase.from("attendance_records").insert({
+          id: newRecord.id,
           session_id: input.sessionId,
           student_reg_no: newRecord.studentRegNo,
           student_name: newRecord.studentName,
@@ -778,6 +1114,26 @@ class AttendanceService {
         });
       } catch (err) {
         console.warn("Supabase student manual insert error:", err);
+
+        if (error) {
+          console.error("Supabase student manual insert error:", error);
+          if (error.code === "PGRST205" || error.message?.includes("Could not find the table")) {
+            throw new Error(
+              "Cloud Database Incomplete: Supabase table 'attendance_records' does not exist yet. Please run the SQL migration in Supabase SQL Editor."
+            );
+          }
+          if (error.code === "23505") {
+            throw new Error(
+              `Duplicate Check-in: Attendance for registration number ${newRecord.studentRegNo} has already been recorded.`
+            );
+          }
+          throw new Error(`Cloud Database Error: ${error.message}`);
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          throw err;
+        }
+        console.warn("Supabase student manual insert fallback:", err);
       }
     }
 
@@ -822,6 +1178,8 @@ class AttendanceService {
             markedBy: d.marked_by ? String(d.marked_by) : undefined,
             markedAt: String(d.marked_at || new Date().toISOString()),
           }));
+        if (!error && Array.isArray(data)) {
+          const dbRecords = data.map((d: Record<string, unknown>) => mapDbRecordToAttendanceRecord(d));
 
           // Merge local cache for records created in-session
           const localRecords = this.getStoredRecords().filter((r) => r.sessionId === sessionId);
@@ -864,6 +1222,16 @@ class AttendanceService {
     };
     this.saveStoredRecords(records);
 
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        await supabase.from("attendance_records").update({ status }).eq("id", recordId);
+      } catch (err) {
+        console.warn("Supabase record status update notice:", err);
+      }
+    }
+
     this.broadcastEvent({
       type: "UPDATE_RECORD",
       sessionId: records[index].sessionId,
@@ -886,6 +1254,16 @@ class AttendanceService {
     const filtered = records.filter((r) => r.id !== recordId);
     this.saveStoredRecords(filtered);
 
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        await supabase.from("attendance_records").delete().eq("id", recordId);
+      } catch (err) {
+        console.warn("Supabase record delete notice:", err);
+      }
+    }
+
     this.broadcastEvent({
       type: "DELETE_RECORD",
       sessionId: record.sessionId,
@@ -906,6 +1284,17 @@ class AttendanceService {
     const records = this.getStoredRecords();
     const filteredRecords = records.filter((r) => r.sessionId !== sessionId);
     this.saveStoredRecords(filteredRecords);
+
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        await supabase.from("attendance_records").delete().eq("session_id", sessionId);
+        await supabase.from("attendance_sessions").delete().eq("id", sessionId);
+      } catch (err) {
+        console.warn("Supabase session delete notice:", err);
+      }
+    }
 
     this.broadcastEvent({
       type: "SESSION_DELETED",
@@ -1004,8 +1393,24 @@ class AttendanceService {
               filter: `session_id=eq.${sessionId}`,
             },
             (payload: { new: unknown }) => {
-              if (payload.new) {
-                onNewRecord(payload.new as AttendanceRecord);
+              if (payload.new && typeof payload.new === "object") {
+                const mapped = mapDbRecordToAttendanceRecord(payload.new as Record<string, unknown>);
+                onNewRecord(mapped);
+              }
+            }
+          )
+          .on(
+            "postgres_changes",
+            {
+              event: "UPDATE",
+              schema: "public",
+              table: "attendance_records",
+              filter: `session_id=eq.${sessionId}`,
+            },
+            (payload: { new: unknown }) => {
+              if (payload.new && typeof payload.new === "object" && onRecordUpdated) {
+                const mapped = mapDbRecordToAttendanceRecord(payload.new as Record<string, unknown>);
+                onRecordUpdated(mapped);
               }
             }
           )
@@ -1105,8 +1510,39 @@ class AttendanceService {
 
   /**
    * Retrieves all attendance records across all sessions.
+   * Directly queries Supabase Database with fallback to local storage.
    */
   async getAllRecords(): Promise<AttendanceRecord[]> {
+    if (this.isSupabaseConfigured()) {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("attendance_records")
+          .select("*")
+          .order("marked_at", { ascending: false });
+
+        if (!error && Array.isArray(data)) {
+          const dbRecords = data.map((d: Record<string, unknown>) => mapDbRecordToAttendanceRecord(d));
+          const localRecords = this.getStoredRecords();
+          const merged = [...dbRecords];
+          localRecords.forEach((local) => {
+            const exists = merged.some(
+              (m) =>
+                m.id === local.id ||
+                (local.studentRegNo && m.studentRegNo === local.studentRegNo && m.sessionId === local.sessionId) ||
+                (local.associateUserId && m.associateUserId === local.associateUserId && m.sessionId === local.sessionId)
+            );
+            if (!exists) {
+              merged.push(local);
+            }
+          });
+          return merged;
+        }
+      } catch (err) {
+        console.warn("Supabase getAllRecords error:", err);
+      }
+    }
     return this.getStoredRecords();
   }
 

@@ -34,7 +34,7 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
     try {
       setLoading(true);
       setError(null);
-      const data = await attendanceService.generateSessionQR(session.id);
+      const data = await attendanceService.generateSessionQR(session.id, "student");
       setQrData(data);
 
       const url = await QRCode.toDataURL(data.scanUrl, {
@@ -140,7 +140,7 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
 
           <h3 className="text-lg font-bold text-slate-900 mb-1">{session.sessionName}</h3>
           <p className="text-xs text-slate-500 max-w-sm mb-4">
-            Scan using default mobile camera or Google Lens. Valid for 5 minutes.
+            Scan using default mobile camera or Google Lens. Valid for 5 minutes. Restricted to 1 response per phone.
           </p>
 
           {/* QR Display Card */}
@@ -186,7 +186,7 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
                 <div className="mt-3 flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 font-medium">
                     <ShieldCheck className="size-3.5 text-emerald-600" />
-                    5-Minute Temporary Token
+                    5-Minute Security Window
                   </span>
                   <button
                     type="button"
@@ -219,7 +219,7 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
                   {isExpired ? "EXPIRED" : `${formatTime(secondsRemaining)} remaining`}
                 </span>
               </span>
-              <span className="text-slate-400 font-mono text-[10px]">No high-frequency rotation</span>
+              <span className="text-slate-400 font-mono text-[10px]">Anti-Proxy Single Submission</span>
             </div>
 
             {/* Link Copy Box */}
