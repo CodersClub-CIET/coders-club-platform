@@ -13,9 +13,15 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     return null;
   }
 
+  const role =
+    (user.user_metadata?.role as AuthUser["role"]) ||
+    (user.email?.includes("admin") ? "admin" : "associate");
+
   return {
     id: user.id,
     email: user.email ?? "",
+    role,
+    name: user.user_metadata?.name || user.email?.split("@")[0] || "User",
   };
 }
 

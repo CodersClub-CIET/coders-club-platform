@@ -14,6 +14,7 @@ import ODReportModal from "@/components/attendance/od-report-modal";
 import AttendanceAnalyticsView from "@/components/attendance/attendance-analytics-view";
 import StudentLookupView from "@/components/attendance/student-lookup-view";
 import CoordinatorAttendanceView from "@/components/attendance/coordinator-attendance-view";
+import DatabaseStatusBanner from "@/components/attendance/database-status-banner";
 import {
   Activity,
   BarChart3,
@@ -156,13 +157,6 @@ export default function AttendanceManagementPage() {
                 <span>Attendance</span>
               </Link>
               <Link
-                href="/scores"
-                className="text-xs font-semibold text-slate-600 hover:text-indigo-600 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
-              >
-                <FileText className="size-3.5" />
-                <span>Score Board</span>
-              </Link>
-              <Link
                 href="/attendance/scan"
                 className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors border border-emerald-200"
               >
@@ -175,6 +169,10 @@ export default function AttendanceManagementPage() {
 
         {/* Content Container */}
         <div className="px-4 sm:px-6 lg:px-8 pb-10">
+          <div className="max-w-7xl mx-auto">
+            <DatabaseStatusBanner />
+          </div>
+
           {/* Top Banner */}
           <div className="max-w-7xl mx-auto mb-6">
             <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
