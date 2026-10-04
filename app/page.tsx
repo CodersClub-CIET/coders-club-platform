@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Users } from "lucide-react";
 import SearchBar from "@/components/search-filtering/SearchBar";
 import FilterPanel from "@/components/search-filtering/FilterPanel";
 import ResultsTable, {
@@ -124,23 +125,33 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-6 py-10">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Search & Filtering
-          </h1>
+    <main className="min-h-screen bg-gray-50">
+      <div className="mx-auto max-w-6xl px-5 py-10 sm:px-6 lg:px-8">
+        <header className="mb-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-900 text-white shadow-sm">
+              <Users size={21} />
+            </div>
 
-          <p className="mt-2 text-sm text-gray-600">
-            Search and filter student records.
-          </p>
-        </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+                Search & Filtering
+              </h1>
 
-        <div className="space-y-6">
-          <SearchBar
-            value={search}
-            onChange={handleSearchChange}
-          />
+              <p className="mt-1 text-sm text-gray-500">
+                Find student records quickly using search and filters.
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <section className="space-y-5">
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <SearchBar
+              value={search}
+              onChange={handleSearchChange}
+            />
+          </div>
 
           <FilterPanel
             academicYear={academicYear}
@@ -152,9 +163,20 @@ export default function Home() {
             onClear={handleClearFilters}
           />
 
-          <div className="text-sm text-gray-600">
-            Showing {paginatedStudents.length} of{" "}
-            {filteredStudents.length} students
+          <div className="flex items-center justify-between pt-2">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">
+                Student Records
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-500">
+                {filteredStudents.length}{" "}
+                {filteredStudents.length === 1
+                  ? "student"
+                  : "students"}{" "}
+                found
+              </p>
+            </div>
           </div>
 
           <ResultsTable students={paginatedStudents} />
@@ -164,7 +186,7 @@ export default function Home() {
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
-        </div>
+        </section>
       </div>
     </main>
   );
