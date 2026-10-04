@@ -1,69 +1,62 @@
-import Image from "next/image";
+import Link from "next/link";
+import { QrCode, ArrowRight, ShieldCheck, Users, GraduationCap } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col justify-center items-center p-6 sm:p-12">
+      <div className="w-full max-w-3xl rounded-3xl bg-white p-8 sm:p-12 shadow-xl border border-gray-100 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
+          <QrCode className="h-9 w-9" />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <h1 className="mt-6 text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">
+          Coders Club Attendance Platform
+        </h1>
+
+        <p className="mt-3 text-base text-gray-600 max-w-xl mx-auto">
+          Server-authoritative Dynamic QR attendance with anti-replay challenge rotation, duplicate prevention, and real-time validation.
+        </p>
+
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+          <Link
+            href="/dynamic-qr"
+            className="group rounded-2xl border border-indigo-100 bg-indigo-50/50 p-6 transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-md"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <div className="flex items-center justify-between">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+                <GraduationCap className="h-5 w-5" />
+              </span>
+              <ArrowRight className="h-5 w-5 text-indigo-500 transition-transform group-hover:translate-x-1" />
+            </div>
+            <h3 className="mt-4 font-bold text-gray-900 text-lg">Launch Dynamic QR</h3>
+            <p className="mt-1 text-xs text-gray-600">
+              Start attendance sessions for Students or Associates with live countdown and scannable QR display.
+            </p>
+          </Link>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-xs">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700">
+              <ShieldCheck className="h-5 w-5 text-indigo-600" />
+            </div>
+            <h3 className="mt-4 font-bold text-gray-900 text-lg">Security & Anti-Replay</h3>
+            <p className="mt-1 text-xs text-gray-600">
+              Opaque cryptographic tokens, atomic single-use consumption, and server-side duplicate checks.
+            </p>
+          </div>
         </div>
-      </main>
-    </div>
+
+        <div className="mt-8 border-t border-gray-100 pt-6 flex flex-wrap items-center justify-center gap-6 text-xs text-gray-500">
+          <span className="flex items-center gap-1.5">
+            <Users className="h-4 w-4 text-indigo-600" /> Student & Associate QR
+          </span>
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="h-4 w-4 text-indigo-600" /> Server Authoritative
+          </span>
+          <span className="flex items-center gap-1.5">
+            <QrCode className="h-4 w-4 text-indigo-600" /> Google Lens & Camera Ready
+          </span>
+        </div>
+      </div>
+    </main>
   );
 }
