@@ -6,6 +6,11 @@ type FilterPanelProps = {
   academicYear: string;
   className: string;
   section: string;
+
+  academicYears: string[];
+  classes: string[];
+  sections: string[];
+
   onAcademicYearChange: (value: string) => void;
   onClassChange: (value: string) => void;
   onSectionChange: (value: string) => void;
@@ -16,6 +21,9 @@ export default function FilterPanel({
   academicYear,
   className,
   section,
+  academicYears,
+  classes,
+  sections,
   onAcademicYearChange,
   onClassChange,
   onSectionChange,
@@ -49,8 +57,12 @@ export default function FilterPanel({
             className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100"
           >
             <option value="">All Years</option>
-            <option value="2026">2026</option>
-            <option value="2025">2025</option>
+
+            {academicYears.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -69,8 +81,12 @@ export default function FilterPanel({
             className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100"
           >
             <option value="">All Classes</option>
-            <option value="III CSE">III CSE</option>
-            <option value="II CSE">II CSE</option>
+
+            {classes.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -89,8 +105,12 @@ export default function FilterPanel({
             className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100"
           >
             <option value="">All Sections</option>
-            <option value="A">A</option>
-            <option value="B">B</option>
+
+            {sections.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
         </div>
 

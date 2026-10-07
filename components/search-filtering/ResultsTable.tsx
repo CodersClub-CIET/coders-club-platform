@@ -3,7 +3,7 @@
 import { UserRound } from "lucide-react";
 
 export type Student = {
-  id: number;
+  id: string;
   name: string;
   registerNumber: string;
   className: string;
