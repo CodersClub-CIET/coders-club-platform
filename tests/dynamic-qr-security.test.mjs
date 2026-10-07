@@ -1,18 +1,19 @@
+import "./typescript-register.mjs";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-// Import server store methods
-import {
+// Load TypeScript only after the test-only compiler hooks are registered.
+const {
   createSession,
   rotateChallenge,
   endSession,
   verifyAndConsumeAttendance,
   generateSecureOpaqueToken,
   getSessionById,
-} from "../lib/dynamic-qr/server-store.ts";
-import { QRErrorCode } from "../lib/dynamic-qr/types.ts";
+} = await import("../lib/dynamic-qr/server-store.ts");
+const { QRErrorCode } = await import("../lib/dynamic-qr/types.ts");
 
 describe("Dynamic QR Module - Core & Security Test Suite", () => {
 

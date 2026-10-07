@@ -1,14 +1,7 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  env: {
-    NEXT_PUBLIC_SUPABASE_URL:
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      "https://acnhfntawflgkomksddp.supabase.co",
-    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-      "sb_publishable_aCtgFXotDJyEWyIsv3foaA_jGStSN2W",
-  },
-};
+// Next.js exposes NEXT_PUBLIC_* from the developer's environment normally.
+// Never silently redirect an unconfigured installation to another project.
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

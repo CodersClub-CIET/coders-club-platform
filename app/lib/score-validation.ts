@@ -1,4 +1,4 @@
-import { ScoreValidationResult, UpdateScorePayload } from "../types/score";
+import type { ScoreValidationResult, UpdateScorePayload } from "../types/score";
 
 /**
  * Validates a numeric score against boundary conditions.

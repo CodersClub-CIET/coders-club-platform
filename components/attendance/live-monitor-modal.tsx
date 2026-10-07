@@ -312,17 +312,6 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                 Coordinators ({associateCount})
               </button>
             </div>
-        {/* Search Bar */}
-        <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-          <div className="relative w-72">
-            <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search Reg No, Student Name, Dept..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-            />
           </div>
 
           <div className="text-xs text-slate-400 font-mono">
