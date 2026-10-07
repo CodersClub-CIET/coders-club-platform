@@ -1,120 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { EventReference, EventScoreRecord } from "@/app/types/score";
 import { validateScore, calculatePercentage } from "@/app/lib/score-validation";
-
-// Mock Event Data for testing & standalone preview
-const MOCK_EVENTS: EventReference[] = [
-  {
-    id: "evt-101",
-    name: "Tech Fest - Web Development",
-    maxScore: 100,
-  },
-  {
-    id: "evt-102",
-    name: "Debugging Contest",
-    maxScore: 50,
-  },
-  {
-    id: "evt-103",
-    name: "Code Relay",
-    maxScore: 75,
-  },
-];
-
-// Mock Student Score Records
-const INITIAL_RECORDS: EventScoreRecord[] = [
-  {
-    id: "rec-1",
-    studentId: "stu-001",
-    studentRegNo: "917621104001",
-    studentName: "Aarav Kumar",
-    department: "CSE",
-    year: 3,
-    section: "A",
-    eventId: "evt-101",
-    eventName: "Tech Fest - Web Development",
-    score: 85,
-    maxScore: 100,
-    enteredBy: "usr-admin1",
-    enteredByName: "Maheswaran",
-    createdAt: "2026-09-30T10:00:00Z",
-    updatedAt: "2026-09-30T10:00:00Z",
-  },
-  {
-    id: "rec-2",
-    studentId: "stu-002",
-    studentRegNo: "917621104002",
-    studentName: "Bhavana Sharma",
-    department: "CSE",
-    year: 3,
-    section: "B",
-    eventId: "evt-101",
-    eventName: "Tech Fest - Web Development",
-    score: 92,
-    maxScore: 100,
-    enteredBy: "usr-admin1",
-    enteredByName: "Maheswaran",
-    createdAt: "2026-09-30T10:05:00Z",
-    updatedAt: "2026-09-30T10:05:00Z",
-  },
-  {
-    id: "rec-3",
-    studentId: "stu-003",
-    studentRegNo: "917621104003",
-    studentName: "Chandran R",
-    department: "IT",
-    year: 2,
-    section: "A",
-    eventId: "evt-102",
-    eventName: "Debugging Contest",
-    score: 42,
-    maxScore: 50,
-    enteredBy: "usr-admin1",
-    enteredByName: "Maheswaran",
-    createdAt: "2026-09-30T11:00:00Z",
-    updatedAt: "2026-09-30T11:00:00Z",
-  },
-  {
-    id: "rec-4",
-    studentId: "stu-004",
-    studentRegNo: "917621104004",
-    studentName: "Divya Lakshmi",
-    department: "ECE",
-    year: 4,
-    section: "A",
-    eventId: "evt-102",
-    eventName: "Debugging Contest",
-    score: 38,
-    maxScore: 50,
-    enteredBy: "usr-admin1",
-    enteredByName: "Maheswaran",
-    createdAt: "2026-09-30T11:15:00Z",
-    updatedAt: "2026-09-30T11:15:00Z",
-  },
-  {
-    id: "rec-5",
-    studentId: "stu-005",
-    studentRegNo: "917621104005",
-    studentName: "Eshwar Prasad",
-    department: "AIDS",
-    year: 2,
-    section: "B",
-    eventId: "evt-103",
-    eventName: "Code Relay",
-    score: 60,
-    maxScore: 75,
-    enteredBy: "usr-admin1",
-    enteredByName: "Maheswaran",
-    createdAt: "2026-09-30T12:00:00Z",
-    updatedAt: "2026-09-30T12:00:00Z",
-  },
-];
+import { useAuth } from "@/lib/auth/use-auth";
+import {
+  fetchEventScores,
+  SEED_EVENTS,
+  subscribeToRealtimeScores,
+  unsubscribeRealtimeScores,
+  updateEventScoreInSupabase,
+} from "@/app/lib/score-service";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export default function ScoreManagementTable() {
-  const [events] = useState<EventReference[]>(MOCK_EVENTS);
-  const [records, setRecords] = useState<EventScoreRecord[]>(INITIAL_RECORDS);
+  const { user, isAuthenticated } = useAuth();
+  const [events] = useState<EventReference[]>(SEED_EVENTS);
+  const [records, setRecords] = useState<EventScoreRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedEventId, setSelectedEventId] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -124,6 +27,43 @@ export default function ScoreManagementTable() {
   const [feedback, setFeedback] = useState<
     Record<string, { type: "success" | "error"; text: string }>
   >({});
+
+  // 1. Initial Data Fetching from Supabase / Fallback
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadScores() {
+      setLoading(true);
+      const res = await fetchEventScores();
+      if (isMounted) {
+        setRecords(res.data);
+        setLoading(false);
+      }
+    }
+
+    loadScores();
+
+    // 2. Realtime Subscription Setup
+    const channel: RealtimeChannel | null = subscribeToRealtimeScores(
+      (updatedRecord) => {
+        if (!isMounted) return;
+        setRecords((prev) => {
+          const index = prev.findIndex((r) => r.id === updatedRecord.id);
+          if (index !== -1) {
+            const next = [...prev];
+            next[index] = updatedRecord;
+            return next;
+          }
+          return [updatedRecord, ...prev];
+        });
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      unsubscribeRealtimeScores(channel);
+    };
+  }, []);
 
   // Filter records based on selected event and search query
   const filteredRecords = records.filter((rec) => {
@@ -138,7 +78,6 @@ export default function ScoreManagementTable() {
 
   const handleInputChange = (recordId: string, val: string) => {
     setEditInputs((prev) => ({ ...prev, [recordId]: val }));
-    // Clear feedback when typing
     if (feedback[recordId]) {
       setFeedback((prev) => {
         const next = { ...prev };
@@ -148,11 +87,11 @@ export default function ScoreManagementTable() {
     }
   };
 
-  const handleUpdateScore = (record: EventScoreRecord) => {
+  const handleUpdateScore = async (record: EventScoreRecord) => {
     const rawVal = editInputs[record.id];
     const numVal = Number(rawVal);
 
-    // Perform validation check using validateScore helper
+    // Dynamic maxScore validation check
     const validation = validateScore(numVal, record.maxScore);
 
     if (!validation.isValid) {
@@ -166,15 +105,31 @@ export default function ScoreManagementTable() {
       return;
     }
 
-    // Update local state record
-    const updatedTimestamp = new Date().toISOString();
+    // Evaluator Audit Identity
+    const evaluatorId = user?.id || record.enteredBy || "auth-user";
+    const evaluatorName =
+      user?.email ||
+      (user?.user_metadata?.full_name as string) ||
+      record.enteredByName ||
+      "Evaluator";
+
+    // Optimistic UI Update
+    const { updatedAt } = await updateEventScoreInSupabase(
+      record.id,
+      numVal,
+      evaluatorId,
+      evaluatorName
+    );
+
     setRecords((prevRecords) =>
       prevRecords.map((r) =>
         r.id === record.id
           ? {
               ...r,
               score: numVal,
-              updatedAt: updatedTimestamp,
+              enteredBy: evaluatorId,
+              enteredByName: evaluatorName,
+              updatedAt,
             }
           : r
       )
@@ -220,10 +175,19 @@ export default function ScoreManagementTable() {
               View student event scores, validate entries, and update marks in real time.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
               Total Records: {filteredRecords.length}
             </span>
+            {isAuthenticated ? (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Evaluator: {user?.email || "Authenticated"}
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                Session: Evaluator Mode
+              </span>
+            )}
           </div>
         </div>
 
@@ -277,7 +241,19 @@ export default function ScoreManagementTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredRecords.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="text-center py-12 text-slate-500 font-medium"
+                  >
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Loading score records from Supabase database...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredRecords.length === 0 ? (
                 <tr>
                   <td
                     colSpan={6}
