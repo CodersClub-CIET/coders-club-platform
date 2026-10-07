@@ -1,59 +1,62 @@
-/**
- * Team Management - data contracts.
- *
- * Students are NOT owned here: TeamMember is a read-only projection of the
- * existing student record (see StudentReference in app/types/score.ts, which
- * uses the same field names).
- *
- * Coin types are NOT owned here either: CoinBalance is whatever the coin-type
- * source returns, merged with this team's balance. No coin name appears in code.
- */
-
-/** Server-trusted role, as reported by public.current_app_role(). */
+/** Read-only projections of the existing shared Supabase tables. */
 export type TeamRole = "admin" | "associate";
+export type TeamStatus = "active" | "inactive" | "disbanded" | "archived";
 
 export interface TeamSummary {
   id: string;
-  teamCode: string;
+  academicYearId: string;
   name: string;
+  description: string | null;
+  /** Display alias for the stored teams.team_score; never calculated here. */
   score: number;
-  version: number;
+  status: TeamStatus;
+  createdAt: string;
+  updatedAt: string;
   memberCount: number;
 }
 
-export interface TeamMember {
-  studentId: string;
-  regNo: string;
-  name: string;
-  department: string;
+export interface TeamMemberPlacement {
+  programId: string;
+  /** Existing programs.name, not a duplicated department field. */
+  department: string | null;
   year: number;
   section: string;
+  isCurrent: boolean;
+}
+
+export interface TeamMember {
+  membershipId: string;
+  studentId: string;
+  /** Null means the related student is unavailable under the caller's RLS. */
+  regNo: string | null;
+  name: string | null;
+  /** Scalar placement fields are null when no single placement is unambiguous. */
+  department: string | null;
+  year: number | null;
+  section: string | null;
+  placements: TeamMemberPlacement[];
 }
 
 export interface CoinBalance {
   coinTypeId: string;
   code: string;
   name: string;
-  /** 0 when the team has no stored row for this coin type. */
+  /** 0 when no balance row is visible for this enabled coin type. */
   balance: number;
-  sortOrder: number;
 }
 
-export interface TeamDetail {
-  id: string;
-  teamCode: string;
-  name: string;
-  score: number;
-  version: number;
+export interface TeamDetail extends TeamSummary {
   members: TeamMember[];
   coins: CoinBalance[];
 }
 
+/** Retained because the existing validation module imports this type. */
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
 }
 
+/** Existing error-handler vocabulary retained; this service performs no writes. */
 export type TeamServiceErrorKind =
   | "forbidden"
   | "conflict"
