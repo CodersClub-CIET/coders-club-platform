@@ -1,9 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  allocationService,
-} from "@/lib/allocation/service";
+import { allocationService } from "@/lib/allocation/service";
 import type {
   AssociateAllocation,
   AllocationStatus,
@@ -12,24 +10,55 @@ import type {
 export default function AllocationManagementTable() {
   const [allocations, setAllocations] = useState<AssociateAllocation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | AllocationStatus>(
     "all"
   );
   const [search, setSearch] = useState("");
 
-  const loadAllocations = async () => {
+  const handleRefresh = async () => {
     setLoading(true);
+    setError(null);
 
     try {
       const data = await allocationService.getAllocations();
       setAllocations(data);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to load allocations from Supabase.";
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadAllocations();
+    let ignore = false;
+
+    allocationService
+      .getAllocations()
+      .then((data) => {
+        if (!ignore) {
+          setAllocations(data);
+          setLoading(false);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const message =
+            err instanceof Error
+              ? err.message
+              : "Failed to load allocations from Supabase.";
+          setError(message);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const filteredAllocations = useMemo(() => {
@@ -43,7 +72,14 @@ export default function AllocationManagementTable() {
         !searchValue ||
         allocation.associateId.toLowerCase().includes(searchValue) ||
         allocation.eventId.toLowerCase().includes(searchValue) ||
-        allocation.subEventId?.toLowerCase().includes(searchValue);
+        (allocation.eventNodeId &&
+          allocation.eventNodeId.toLowerCase().includes(searchValue)) ||
+        (allocation.associateName &&
+          allocation.associateName.toLowerCase().includes(searchValue)) ||
+        (allocation.eventName &&
+          allocation.eventName.toLowerCase().includes(searchValue)) ||
+        (allocation.subEventId &&
+          allocation.subEventId.toLowerCase().includes(searchValue));
 
       return matchesStatus && matchesSearch;
     });
@@ -65,7 +101,7 @@ export default function AllocationManagementTable() {
               Allocation Management
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              View and manage associate event allocations.
+              View and manage associate event allocations stored in Supabase.
             </p>
           </div>
 
@@ -96,8 +132,8 @@ export default function AllocationManagementTable() {
 
             <button
               type="button"
-              onClick={loadAllocations}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+              onClick={handleRefresh}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition"
             >
               Refresh
             </button>
@@ -105,10 +141,17 @@ export default function AllocationManagementTable() {
         </div>
       </div>
 
+      {error && (
+        <div className="mx-5 my-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <p className="font-semibold">Unable to load allocations</p>
+          <p className="mt-1">{error}</p>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         {loading ? (
           <div className="p-8 text-center text-sm text-slate-500">
-            Loading allocations...
+            Loading allocations from Supabase...
           </div>
         ) : filteredAllocations.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500">
@@ -119,7 +162,7 @@ export default function AllocationManagementTable() {
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-5 py-3">Associate</th>
-                <th className="px-5 py-3">Event</th>
+                <th className="px-5 py-3">Event Node</th>
                 <th className="px-5 py-3">Sub-event</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3">Attendance</th>
@@ -131,18 +174,18 @@ export default function AllocationManagementTable() {
               {filteredAllocations.map((allocation) => (
                 <tr
                   key={allocation.id}
-                  className="hover:bg-slate-50"
+                  className="hover:bg-slate-50 transition"
                 >
                   <td className="px-5 py-4 font-medium text-slate-900">
-                    {allocation.associateId}
+                    {allocation.associateName || allocation.associateId}
+                  </td>
+
+                  <td className="px-5 py-4 text-slate-600 font-mono text-xs">
+                    {allocation.eventName || allocation.eventId}
                   </td>
 
                   <td className="px-5 py-4 text-slate-600">
-                    {allocation.eventId}
-                  </td>
-
-                  <td className="px-5 py-4 text-slate-600">
-                    {allocation.subEventId || "—"}
+                    {allocation.subEventName || allocation.subEventId || "—"}
                   </td>
 
                   <td className="px-5 py-4">
@@ -157,11 +200,13 @@ export default function AllocationManagementTable() {
 
                   <td className="px-5 py-4">
                     {allocation.attendanceAccess ? (
-                      <span className="font-medium text-green-600">
+                      <span className="inline-flex items-center gap-1 font-medium text-green-600">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                         Enabled
                       </span>
                     ) : (
-                      <span className="font-medium text-slate-500">
+                      <span className="inline-flex items-center gap-1 font-medium text-slate-500">
+                        <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
                         Disabled
                       </span>
                     )}
