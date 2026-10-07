@@ -2,13 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Lock } from "lucide-react";
-import { toast } from "sonner";
 import { Loading } from "@/components/ui/loading";
 import {
   getCurrentTeamRole,
   getTeamDetail,
   listTeams,
-  type UpdatedTeamFields,
 } from "@/lib/team-management/service";
 import {
   TeamServiceError,
@@ -26,9 +24,8 @@ import {
 } from "./team-editors";
 
 /**
- * One reusable module for both roles. `role` comes from the database
- * (public.current_app_role) and only decides what is RENDERED; RLS and the
- * mutation functions enforce what is ALLOWED.
+ * Read-only module for both roles. The service resolves the active database
+ * profile; existing RLS remains authoritative for team and related-data access.
  */
 export function TeamManagementView() {
   // undefined = still resolving, null = no Team Management access
@@ -119,38 +116,6 @@ export function TeamManagementView() {
     void fetchDetail(teamId);
   }
 
-  // Apply the server's confirmed values (no optimistic guesswork to roll back).
-  function applyTeamPatch(patch: UpdatedTeamFields) {
-    setDetail((d) => (d ? { ...d, ...patch } : d));
-    setTeams((list) =>
-      list.map((t) => (t.id === selectedId ? { ...t, ...patch } : t))
-    );
-  }
-
-  function applyCoinPatch(coinTypeId: string, balance: number) {
-    setDetail((d) =>
-      d
-        ? {
-            ...d,
-            coins: d.coins.map((c) =>
-              c.coinTypeId === coinTypeId ? { ...c, balance } : c
-            ),
-          }
-        : d
-    );
-  }
-
-  function handleMutationError(error: unknown) {
-    if (error instanceof TeamServiceError) {
-      toast.error(error.message);
-      if (error.kind === "conflict" || error.kind === "not_found") {
-        refreshAll();
-      }
-      return;
-    }
-    toast.error("Unable to save changes.");
-  }
-
   if (role === undefined) {
     return <Loading label="Loading teams..." />;
   }
@@ -161,24 +126,20 @@ export function TeamManagementView() {
         role="alert"
         className="bg-white border border-slate-200 rounded-2xl p-6 text-sm text-slate-700"
       >
-        You do not have permission to view Team Management.
+        {listError ?? "You do not have permission to view Team Management."}
       </p>
     );
   }
 
-  const canEdit = role === "associate";
-
   return (
     <div className="space-y-4">
-      {!canEdit && (
-        <div
-          role="note"
-          className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
-        >
-          <Lock aria-hidden="true" className="size-3.5" />
-          READ ONLY
-        </div>
-      )}
+      <div
+        role="note"
+        className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+      >
+        <Lock aria-hidden="true" className="size-3.5" />
+        READ ONLY
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[22rem_minmax(0,1fr)] gap-6">
         <TeamList
@@ -207,25 +168,10 @@ export function TeamManagementView() {
             </p>
           ) : (
             <>
-              <TeamDetailsPanel
-                team={detail}
-                canEdit={canEdit}
-                onTeamUpdated={applyTeamPatch}
-                onMutationError={handleMutationError}
-              />
+              <TeamDetailsPanel team={detail} />
               <TeamMembersPanel members={detail.members} />
-              <TeamScorePanel
-                team={detail}
-                canEdit={canEdit}
-                onTeamUpdated={applyTeamPatch}
-                onMutationError={handleMutationError}
-              />
-              <TeamCoinPanel
-                team={detail}
-                canEdit={canEdit}
-                onCoinUpdated={applyCoinPatch}
-                onMutationError={handleMutationError}
-              />
+              <TeamScorePanel team={detail} />
+              <TeamCoinPanel team={detail} />
             </>
           )}
         </div>

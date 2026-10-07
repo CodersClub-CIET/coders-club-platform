@@ -28,7 +28,7 @@ export function TeamList({
     ? teams.filter(
         (t) =>
           t.name.toLowerCase().includes(query) ||
-          t.teamCode.toLowerCase().includes(query)
+          (t.description ?? "").toLowerCase().includes(query)
       )
     : teams;
 
@@ -82,8 +82,8 @@ export function TeamList({
                     <span className="font-semibold text-slate-900 break-words">
                       {team.name}
                     </span>
-                    <span className="shrink-0 font-mono text-[11px] text-slate-500">
-                      {team.teamCode}
+                    <span className="shrink-0 text-[11px] text-slate-500 capitalize">
+                      {team.status}
                     </span>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-xs text-slate-600">
@@ -95,7 +95,7 @@ export function TeamList({
                     <span>
                       Score:{" "}
                       <span className="font-semibold text-slate-900">
-                        {team.score.toLocaleString("en-IN")}
+                        {team.score.toLocaleString("en-IN", { maximumFractionDigits: 20 })}
                       </span>
                     </span>
                   </div>
