@@ -1,3 +1,5 @@
+> Current implemented Supabase identity/profile/role behavior is documented in [authentication.md](authentication.md). The Django-era notes below are historical, not an implemented backend or authoritative role source.
+
 \# Authentication Contract
 
 

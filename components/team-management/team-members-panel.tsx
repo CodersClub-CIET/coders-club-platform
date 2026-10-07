@@ -33,7 +33,7 @@ export function TeamMembersPanel({ members }: { members: TeamMember[] }) {
                     <td className="py-2 pr-4 font-medium text-slate-900">{m.name}</td>
                     <td className="py-2 pr-4 font-mono text-xs text-slate-600">{m.regNo}</td>
                     <td className="py-2 pr-4 text-slate-700">{m.department}</td>
-                    <td className="py-2 pr-4 text-slate-700">{formatYear(m.year)}</td>
+                    <td className="py-2 pr-4 text-slate-700">{m.year === null ? "Unavailable" : formatYear(m.year)}</td>
                     <td className="py-2 text-slate-700">{m.section}</td>
                   </tr>
                 ))}
@@ -51,7 +51,7 @@ export function TeamMembersPanel({ members }: { members: TeamMember[] }) {
                 <p className="font-medium text-slate-900">{m.name}</p>
                 <p className="font-mono text-xs text-slate-500">{m.regNo}</p>
                 <p className="mt-1 text-xs text-slate-600">
-                  {m.department} &bull; Year {formatYear(m.year)} &bull; Section{" "}
+                  {m.department} &bull; Year {m.year === null ? "Unavailable" : formatYear(m.year)} &bull; Section{" "}
                   {m.section}
                 </p>
               </li>

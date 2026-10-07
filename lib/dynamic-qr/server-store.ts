@@ -1,3 +1,4 @@
+// Legacy test fixtures only. Production routes must never import this module.
 import crypto from "crypto";
 import {
   type QRAttendanceSession,
@@ -8,7 +9,7 @@ import {
   type ConsumeChallengeResponse,
   QRErrorCode,
   type PredefinedEvent,
-} from "./types";
+} from "./legacy-types";
 
 /**
  * Predefined club events for quick selection in the UI
