@@ -757,8 +757,6 @@ class AttendanceService {
       try {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
-        await supabase.from("attendance_records").insert({
-
         // 1. Ensure parent session exists in attendance_sessions to satisfy foreign key constraint
         try {
           const currentSession = await this.getSessionById(challenge.sessionId);
@@ -794,9 +792,6 @@ class AttendanceService {
           status: "present",
           marked_at: newRecord.markedAt,
         });
-      } catch (err) {
-        console.warn("Supabase student record insert fallback to local storage:", err);
-
         if (error) {
           console.error("Supabase student record insert error:", error);
           if (error.code === "PGRST205" || error.message?.includes("Could not find the table")) {
@@ -895,10 +890,6 @@ class AttendanceService {
       try {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
-        await supabase.from("attendance_records").insert({
-          session_id: challenge.sessionId,
-          associate_user_id: newRecord.associateUserId,
-          student_name: newRecord.associateName,
         const { error } = await supabase.from("attendance_records").insert({
           id: newRecord.id,
           session_id: challenge.sessionId,
@@ -983,10 +974,6 @@ class AttendanceService {
       try {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
-        await supabase.from("attendance_records").insert({
-          session_id: input.sessionId,
-          associate_user_id: newRecord.associateUserId,
-          student_name: newRecord.associateName,
         const { error } = await supabase.from("attendance_records").insert({
           id: newRecord.id,
           session_id: input.sessionId,
@@ -1000,8 +987,6 @@ class AttendanceService {
           marked_by: newRecord.markedBy,
           marked_at: newRecord.markedAt,
         });
-      } catch (err) {
-        console.warn("Supabase coordinator manual insert error:", err);
         if (error) {
           console.error("Supabase coordinator manual insert error:", error);
         }
@@ -1074,8 +1059,6 @@ class AttendanceService {
       try {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
-        await supabase.from("attendance_records").insert({
-
         // 1. Ensure parent session exists in attendance_sessions
         try {
           const currentSession = await this.getSessionById(input.sessionId);
@@ -1112,9 +1095,6 @@ class AttendanceService {
           marked_by: newRecord.markedBy,
           marked_at: newRecord.markedAt,
         });
-      } catch (err) {
-        console.warn("Supabase student manual insert error:", err);
-
         if (error) {
           console.error("Supabase student manual insert error:", error);
           if (error.code === "PGRST205" || error.message?.includes("Could not find the table")) {
@@ -1161,23 +1141,6 @@ class AttendanceService {
           .eq("session_id", sessionId)
           .order("marked_at", { ascending: false });
 
-        if (!error && data && data.length > 0) {
-          const dbRecords: AttendanceRecord[] = data.map((d: Record<string, unknown>) => ({
-            id: String(d.id),
-            sessionId: String(d.session_id),
-            studentRegNo: d.student_reg_no ? String(d.student_reg_no) : undefined,
-            studentName: d.student_name ? String(d.student_name) : undefined,
-            studentDepartment: d.student_department ? String(d.student_department) : undefined,
-            studentYear: d.student_year ? Number(d.student_year) : undefined,
-            studentSection: d.student_section ? String(d.student_section) : undefined,
-            associateUserId: d.associate_user_id ? String(d.associate_user_id) : undefined,
-            associateName: d.student_name ? String(d.student_name) : undefined,
-            attendeeType: (d.attendee_type as "student" | "associate") || "student",
-            verificationMethod: (d.verification_method as "qr_scan" | "manual_entry") || "qr_scan",
-            status: (d.status as AttendanceStatus) || "present",
-            markedBy: d.marked_by ? String(d.marked_by) : undefined,
-            markedAt: String(d.marked_at || new Date().toISOString()),
-          }));
         if (!error && Array.isArray(data)) {
           const dbRecords = data.map((d: Record<string, unknown>) => mapDbRecordToAttendanceRecord(d));
 

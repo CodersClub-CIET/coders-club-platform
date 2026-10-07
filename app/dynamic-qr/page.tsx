@@ -7,16 +7,23 @@ import {
   refreshAttendanceChallenge,
   endAttendanceSession,
   getSessionRecords,
+  getAttendanceSession,
+  getQREvents,
+  listAttendanceSessions,
+  QRApiError,
 } from "@/lib/dynamic-qr/client";
 import {
   type QRAttendanceSession,
   type QRChallenge,
   type QRAttendanceRecord,
   type AttendanceRole,
+  type AttendanceContextType,
+  type EventOption,
 } from "@/lib/dynamic-qr/types";
-import { PREDEFINED_EVENTS } from "@/lib/dynamic-qr/events";
 import { useQRRealtime } from "@/lib/dynamic-qr/use-qr-realtime";
 import { useAuth } from "@/lib/auth/use-auth";
+import { canOperateQR } from "@/lib/auth/access";
+import { ManagementGuard } from "@/components/auth/management-guard";
 import {
   QrCode,
   Users,
@@ -34,26 +41,27 @@ import {
   Sparkles,
 } from "lucide-react";
 
-function generateRandomSuffix(): string {
-  return Math.random().toString(36).substring(2, 9);
+export default function DynamicQRPage() {
+  return <ManagementGuard><DynamicQRManagement /></ManagementGuard>;
 }
 
-export default function DynamicQRPage() {
+function DynamicQRManagement() {
   const { user, role: userRole } = useAuth();
 
-  // Mode Selection: "student" (Associate displays for students) or "associate" (Admin displays for associates)
+  // Associate consumption is deferred; both approved manager roles can operate student QR.
   const [selectedRole, setSelectedRole] = useState<AttendanceRole>("student");
-
-  // Event Selection Form State
-  const [selectedEventId, setSelectedEventId] = useState<string>(PREDEFINED_EVENTS[0].id);
-  const [customEventName, setCustomEventName] = useState<string>("");
-  const [selectedSubEventId, setSelectedSubEventId] = useState<string>(
-    PREDEFINED_EVENTS[0].sub_events[0]?.id || ""
-  );
-  const [selectedContext, setSelectedContext] = useState<string>(
-    PREDEFINED_EVENTS[0].contexts[0]?.id || "session_1"
-  );
-  const [customContext, setCustomContext] = useState<string>("");
+  const [events, setEvents] = useState<EventOption[]>([]);
+  const [recentSessions, setRecentSessions] = useState<QRAttendanceSession[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [selectedContext, setSelectedContext] = useState<AttendanceContextType>("morning");
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const mutationRef = useRef(false);
+  const aliveRef = useRef(true);
+  const generationRef = useRef(0);
+  const reloadSequenceRef = useRef(0);
+  const sessionIdRef = useRef<string | null>(null);
   const [refreshInterval, setRefreshInterval] = useState<number>(30);
 
   // Active Session State
@@ -71,180 +79,107 @@ export default function DynamicQRPage() {
   const [originUrl] = useState<string>(() => (typeof window !== "undefined" ? window.location.origin : ""));
 
   const refreshLockRef = useRef<boolean>(false);
+  const rotationRetryAtRef = useRef(0);
 
-  // Event Selection Handler (directly updates sub-events and context on change without triggering synchronous setState in effect)
-  function handleSelectEvent(eventId: string) {
-    setSelectedEventId(eventId);
-    const evt = PREDEFINED_EVENTS.find((e) => e.id === eventId);
-    if (evt) {
-      if (evt.sub_events.length > 0) {
-        setSelectedSubEventId(evt.sub_events[0].id);
-      } else {
-        setSelectedSubEventId("");
-      }
-      if (evt.contexts.length > 0) {
-        setSelectedContext(evt.contexts[0].id);
-      }
-    }
+  function handleSelectEvent(id: string) { setSelectedEventId(id); }
+  const activeEventData = events.find(event => event.id === selectedEventId);
+  useEffect(() => {
+    aliveRef.current = true;
+    let active = true;
+    Promise.all([getQREvents(), listAttendanceSessions()]).then(([available, recent]) => {
+      if (!active) return;
+      setEvents(available); setRecentSessions(recent);
+      setSelectedEventId(available[0]?.id ?? ""); setEventsLoading(false);
+    }).catch(error => { if (active) { setErrorBanner(error instanceof Error ? error.message : "Unable to load authorized events."); setEventsLoading(false); } });
+    return () => { active = false; aliveRef.current = false; };
+  }, []);
+
+  const applySession = useCallback((next: QRAttendanceSession) => {
+    setSession(next); setCurrentChallenge(next.current_challenge ?? null);
+    setRefreshInterval(next.validity_seconds); setAttendanceCount(next.attendance_count);
+    setSecondsRemaining(next.current_challenge ? Math.max(0, Math.ceil((Date.parse(next.current_challenge.expires_at) - Date.now()) / 1000)) : 0);
+    setSessionStatus(next.status === "active" ? "active" : "ended");
+  }, []);
+
+  async function selectExisting(id: string) {
+    if (!id || mutationRef.current || refreshLockRef.current) return;
+    sessionIdRef.current = id; const generation = ++generationRef.current;
+    try { const next = await getAttendanceSession(id); if (aliveRef.current && sessionIdRef.current === id && generation === generationRef.current) { applySession(next); setErrorBanner(null); } }
+    catch (error) { if (aliveRef.current && sessionIdRef.current === id && generation === generationRef.current) setErrorBanner(error instanceof Error ? error.message : "Unable to load session."); }
   }
 
-  const activeEventData = PREDEFINED_EVENTS.find((e) => e.id === selectedEventId);
-
-  // Server-authoritative Challenge Rotation
+  const canMutate = !!session && (userRole === "admin" || (session.created_by === user?.id && session.creator_role === "associate" && session.target_role === "student"));
   const handleServerRotate = useCallback(async () => {
-    if (!session || session.status === "ended" || refreshLockRef.current) return;
-    refreshLockRef.current = true;
+    if (!session || session.status !== "active" || !session.latest_challenge_id || !canMutate || refreshLockRef.current || mutationRef.current) return;
+    const id = session.id; generationRef.current++; refreshLockRef.current = true;
     setSessionStatus("refreshing");
-
     try {
-      const result = await refreshAttendanceChallenge(session.id);
-      setCurrentChallenge(result.challenge);
-      setSecondsRemaining(result.remaining_seconds);
-      setSessionStatus("active");
-      setErrorBanner(null);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to refresh QR challenge";
-      setErrorBanner(msg);
-      setSessionStatus("active");
-    } finally {
-      refreshLockRef.current = false;
-    }
-  }, [session]);
+      await refreshAttendanceChallenge(id, session.latest_challenge_id, refreshInterval);
+      const next = await getAttendanceSession(id);
+      if (aliveRef.current && sessionIdRef.current === id) { applySession(next); setErrorBanner(null); }
+    } catch (error) {
+      rotationRetryAtRef.current = Date.now() + 10000;
+      if (!aliveRef.current || sessionIdRef.current !== id) return;
+      if (error instanceof QRApiError && error.status === 409) {
+        try { const next = await getAttendanceSession(id); if (aliveRef.current && sessionIdRef.current === id) applySession(next); }
+        catch { setErrorBanner("Session state changed. Reload the session."); setSessionStatus("active"); }
+      } else { setErrorBanner(error instanceof Error ? error.message : "Unable to rotate QR."); setSessionStatus("active"); }
+    } finally { refreshLockRef.current = false; }
+  }, [session, canMutate, refreshInterval, applySession]);
 
-  // Periodic Countdown Timer (Server authoritative countdown)
+  // Read durable state on signals and a bounded fallback interval. No optimistic counts.
+  const activeSessionId = session?.id;
+  const reload = useCallback(async () => {
+    if (!activeSessionId || refreshLockRef.current || mutationRef.current) return;
+    const id = activeSessionId; const generation = generationRef.current; const sequence = ++reloadSequenceRef.current;
+    try {
+      const [next, data] = await Promise.all([getAttendanceSession(id), getSessionRecords(id)]);
+      if (aliveRef.current && sessionIdRef.current === id && generation === generationRef.current && sequence === reloadSequenceRef.current) { applySession(next); setRecords(data); setErrorBanner(null); }
+    } catch (error) { if (aliveRef.current && sessionIdRef.current === id && generation === generationRef.current && sequence === reloadSequenceRef.current) setErrorBanner(error instanceof Error ? error.message : "Unable to refresh attendance."); }
+  }, [activeSessionId, applySession]);
+  useEffect(() => {
+    if (!session?.id) return;
+    let active = true;
+    const run = () => { if (active) void reload(); };
+    const immediate = setTimeout(run, 0); const poll = setInterval(run, 4000);
+    return () => { active = false; clearTimeout(immediate); clearInterval(poll); };
+  }, [session?.id, reload]);
+  useQRRealtime({sessionId:session?.id, onChange:() => { void reload(); }});
   useEffect(() => {
     if (sessionStatus !== "active" || !session) return;
-
     const timer = setInterval(() => {
-      setSecondsRemaining((prev) => {
-        if (prev <= 1) {
-          handleServerRotate();
-          return refreshInterval;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [sessionStatus, session, refreshInterval, handleServerRotate]);
-
-  // Poll for attendance records and stats asynchronously
-  useEffect(() => {
-    if (sessionStatus !== "active" || !session?.id) return;
-    const currentSessionId = session.id;
-    let active = true;
-
-    getSessionRecords(currentSessionId)
-      .then((data) => {
-        if (active) {
-          setRecords(data);
-          setAttendanceCount(data.length);
-        }
-      })
-      .catch(() => {});
-
-    const pollTimer = setInterval(() => {
-      getSessionRecords(currentSessionId)
-        .then((data) => {
-          if (active) {
-            setRecords(data);
-            setAttendanceCount(data.length);
-          }
-        })
-        .catch(() => {});
-    }, 4000);
-
-    return () => {
-      active = false;
-      clearInterval(pollTimer);
-    };
-  }, [sessionStatus, session?.id]);
-
-  // Supabase Realtime Integration
-  useQRRealtime({
-    sessionId: session?.id,
-    onChallengeRotated: (challenge, remaining) => {
-      setCurrentChallenge(challenge);
+      const remaining = currentChallenge ? Math.max(0, Math.ceil((Date.parse(currentChallenge.expires_at) - Date.now()) / 1000)) : 0;
       setSecondsRemaining(remaining);
-    },
-    onSessionEnded: () => {
-      setSessionStatus("ended");
-      setSuccessBanner("Attendance session was concluded by the coordinator.");
-    },
-    onAttendanceMarked: (payload) => {
-      if (payload.count !== undefined) {
-        setAttendanceCount(payload.count);
-      } else {
-        setAttendanceCount((c) => c + 1);
-      }
-      if (session?.id) {
-        getSessionRecords(session.id).then(setRecords).catch(() => {});
-      }
-    },
-  });
+      if (remaining === 0 && canMutate && Date.now() >= rotationRetryAtRef.current) void handleServerRotate();
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [sessionStatus, session, currentChallenge, canMutate, handleServerRotate]);
 
   // Start Session
   async function handleStartSession() {
-    setErrorBanner(null);
-    setSuccessBanner(null);
-
-    const eventName = selectedEventId === "custom"
-      ? customEventName.trim()
-      : activeEventData?.name || "General Session";
-
-    if (!eventName) {
-      setErrorBanner("Please specify an event name.");
-      return;
+    if (mutationRef.current || refreshLockRef.current) return;
+    if ((!canOperateQR(userRole, "student") && userRole !== "admin") || selectedRole !== "student") {
+      setErrorBanner("Associate consumption is deferred. Choose student attendance."); return;
     }
-
-    const subEvent = activeEventData?.sub_events.find((s) => s.id === selectedSubEventId);
-    const subEventName = subEvent ? subEvent.name : undefined;
-
-    const contextVal = selectedContext === "custom"
-      ? customContext.trim()
-      : selectedContext;
-
-    if (!contextVal) {
-      setErrorBanner("Please select or enter an attendance context.");
-      return;
-    }
-
+    if (!activeEventData) { setErrorBanner("Choose an authorized existing event."); return; }
+    generationRef.current++; mutationRef.current = true; setStarting(true); setErrorBanner(null); setSuccessBanner(null);
     try {
-      const response = await createAttendanceSession({
-        event_id: selectedEventId === "custom" ? `custom-${generateRandomSuffix()}` : selectedEventId,
-        event_name: eventName,
-        sub_event_id: selectedSubEventId || undefined,
-        sub_event_name: subEventName,
-        attendance_context: contextVal,
-        target_role: selectedRole,
-        refresh_interval_seconds: refreshInterval,
-      });
-
-      setSession(response.session);
-      setCurrentChallenge(response.challenge);
-      setSecondsRemaining(refreshInterval);
-      setAttendanceCount(0);
-      setRecords([]);
-      setSessionStatus("active");
-      setSuccessBanner(`Attendance QR Session started for ${selectedRole === "student" ? "Students" : "Associates"}!`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to start attendance session";
-      setErrorBanner(msg);
-    }
+      const response = await createAttendanceSession({event_node_id:selectedEventId, attendance_context:selectedContext, target_role:"student", validity_seconds:refreshInterval});
+      if (!aliveRef.current) return;
+      sessionIdRef.current = response.session.id; applySession(response.session); setRecords([]);
+      setRecentSessions(previous => [response.session, ...previous]); setSuccessBanner("Student attendance session started.");
+    } catch (error) { if (aliveRef.current) setErrorBanner(error instanceof Error ? error.message : "Unable to start session."); }
+    finally { mutationRef.current = false; if (aliveRef.current) setStarting(false); }
   }
-
-  // End Session
   async function handleEndSession() {
-    if (!session) return;
+    if (!session || mutationRef.current || refreshLockRef.current) return;
+    const id = session.id; generationRef.current++; mutationRef.current = true; setEnding(true);
     try {
-      await endAttendanceSession(session.id);
-      setSessionStatus("ended");
-      setSession((prev) => (prev ? { ...prev, status: "ended" } : null));
-      setSuccessBanner(`Session ended successfully. Final attendees: ${attendanceCount}`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to end session";
-      setErrorBanner(msg);
-    }
+      await endAttendanceSession(id); const next = await getAttendanceSession(id);
+      if (aliveRef.current && sessionIdRef.current === id) { applySession(next); setSuccessBanner("Session ended."); setErrorBanner(null); }
+    } catch (error) {
+      if (aliveRef.current && sessionIdRef.current === id) setErrorBanner(error instanceof Error ? error.message : "Unable to end session.");
+    } finally { mutationRef.current = false; if (aliveRef.current) setEnding(false); }
   }
 
   // Generate complete scannable URL
@@ -254,9 +189,10 @@ export default function DynamicQRPage() {
 
   const copyScanLink = () => {
     if (!qrScanUrl) return;
-    navigator.clipboard.writeText(qrScanUrl);
-    setCopyFeedback(true);
-    setTimeout(() => setCopyFeedback(false), 2000);
+    void navigator.clipboard.writeText(qrScanUrl).then(() => {
+      if (!aliveRef.current) return; setCopyFeedback(true);
+      setTimeout(() => { if (aliveRef.current) setCopyFeedback(false); }, 2000);
+    }).catch(() => { if (aliveRef.current) setErrorBanner("Unable to copy the scan link."); });
   };
 
   const progressPercent = Math.max(0, Math.min(100, (secondsRemaining / refreshInterval) * 100));
@@ -285,9 +221,9 @@ export default function DynamicQRPage() {
           <div className="flex items-center gap-3">
             <div className="rounded-xl border border-gray-200 bg-white px-3.5 py-1.5 shadow-sm text-xs">
               <span className="text-gray-500">Logged in as: </span>
-              <span className="font-semibold text-gray-800">{user?.email || "Associate"}</span>
+              <span className="font-semibold text-gray-800">{user?.email || "Signed-in user"}</span>
               <span className="ml-1.5 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-indigo-700">
-                {userRole || "Associate"}
+                {userRole || "No application role"}
               </span>
             </div>
           </div>
@@ -309,10 +245,11 @@ export default function DynamicQRPage() {
         )}
 
         {/* Role Selector Tabs (Two Required Use Cases) */}
-        {sessionStatus !== "active" && (
+        {(sessionStatus === "idle" || sessionStatus === "ended") && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               type="button"
+              disabled={userRole !== "admin" && !canOperateQR(userRole, "student")}
               onClick={() => setSelectedRole("student")}
               className={`flex items-start gap-4 rounded-2xl border p-5 text-left transition-all ${
                 selectedRole === "student"
@@ -336,6 +273,7 @@ export default function DynamicQRPage() {
 
             <button
               type="button"
+              disabled={true}
               onClick={() => setSelectedRole("associate")}
               className={`flex items-start gap-4 rounded-2xl border p-5 text-left transition-all ${
                 selectedRole === "associate"
@@ -352,7 +290,7 @@ export default function DynamicQRPage() {
                   Operated by Admins. Associates scan to verify coordination duties, mentor participation, or team debrief meetings.
                 </p>
                 <span className="mt-2.5 inline-block text-[11px] font-semibold text-indigo-600">
-                  Target: Associates (Authenticated accounts)
+                  Associate scanning deferred — Proposal 002 is not deployed
                 </span>
               </div>
             </button>
@@ -379,6 +317,14 @@ export default function DynamicQRPage() {
 
               {sessionStatus === "idle" || sessionStatus === "ended" ? (
                 <div className="mt-5 space-y-4">
+                  <div>
+                    <label htmlFor="existingSession" className="block text-xs font-semibold uppercase tracking-wider text-gray-600">Open existing session</label>
+                    <select id="existingSession" defaultValue="" onChange={e => { void selectExisting(e.target.value); }} className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm">
+                      <option value="">Choose a saved session</option>
+                      {recentSessions.map(item => <option key={item.id} value={item.id}>{item.event_name} — {item.attendance_context} — {item.status}</option>)}
+                    </select>
+                  </div>
+                  {!eventsLoading && events.length === 0 && <p className="text-sm text-gray-600">No authorized active events are available.</p>}
                   {/* Event Select */}
                   <div>
                     <label htmlFor="eventSelect" className="block text-xs font-semibold uppercase tracking-wider text-gray-600">
@@ -390,51 +336,14 @@ export default function DynamicQRPage() {
                       onChange={(e) => handleSelectEvent(e.target.value)}
                       className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
                     >
-                      {PREDEFINED_EVENTS.map((evt) => (
+                      {events.map((evt) => (
                         <option key={evt.id} value={evt.id}>
-                          {evt.name} ({evt.category})
+                          {evt.name}
                         </option>
                       ))}
-                      <option value="custom">+ Custom Event Name</option>
+                      <option value="" disabled>{eventsLoading ? "Loading authorized events…" : "Choose an event"}</option>
                     </select>
                   </div>
-
-                  {selectedEventId === "custom" && (
-                    <div>
-                      <label htmlFor="customEvent" className="block text-xs font-semibold uppercase tracking-wider text-gray-600">
-                        Custom Event Title
-                      </label>
-                      <input
-                        id="customEvent"
-                        type="text"
-                        placeholder="Enter event name..."
-                        value={customEventName}
-                        onChange={(e) => setCustomEventName(e.target.value)}
-                        className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      />
-                    </div>
-                  )}
-
-                  {/* Sub-event / Track */}
-                  {activeEventData && activeEventData.sub_events.length > 0 && selectedEventId !== "custom" && (
-                    <div>
-                      <label htmlFor="subEventSelect" className="block text-xs font-semibold uppercase tracking-wider text-gray-600">
-                        Sub-event / Track
-                      </label>
-                      <select
-                        id="subEventSelect"
-                        value={selectedSubEventId}
-                        onChange={(e) => setSelectedSubEventId(e.target.value)}
-                        className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      >
-                        {activeEventData.sub_events.map((sub) => (
-                          <option key={sub.id} value={sub.id}>
-                            {sub.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
 
                   {/* Attendance Context */}
                   <div>
@@ -444,33 +353,13 @@ export default function DynamicQRPage() {
                     <select
                       id="contextSelect"
                       value={selectedContext}
-                      onChange={(e) => setSelectedContext(e.target.value)}
+                      onChange={(e) => setSelectedContext(e.target.value === "afternoon" ? "afternoon" : "morning")}
                       className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
                     >
-                      {activeEventData?.contexts.map((ctx) => (
-                        <option key={ctx.id} value={ctx.id}>
-                          {ctx.label}
-                        </option>
-                      ))}
-                      <option value="custom">+ Custom Context Label</option>
+                      <option value="morning">Morning</option>
+                      <option value="afternoon">Afternoon</option>
                     </select>
                   </div>
-
-                  {selectedContext === "custom" && (
-                    <div>
-                      <label htmlFor="customContext" className="block text-xs font-semibold uppercase tracking-wider text-gray-600">
-                        Custom Context Name
-                      </label>
-                      <input
-                        id="customContext"
-                        type="text"
-                        placeholder="e.g. Workshop Session 3"
-                        value={customContext}
-                        onChange={(e) => setCustomContext(e.target.value)}
-                        className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      />
-                    </div>
-                  )}
 
                   {/* Refresh Interval (Server-Controlled Rotation Period) */}
                   <div>
@@ -498,6 +387,7 @@ export default function DynamicQRPage() {
                     <button
                       type="button"
                       onClick={handleStartSession}
+                      disabled={starting || eventsLoading || !selectedEventId}
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 active:scale-[0.99] transition-all"
                     >
                       <Play className="h-4 w-4" /> Start Attendance QR Session
@@ -513,13 +403,6 @@ export default function DynamicQRPage() {
                       <p className="text-base font-bold text-gray-900">{session?.event_name}</p>
                     </div>
 
-                    {session?.sub_event_name && (
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase font-semibold">Sub-event</p>
-                        <p className="font-medium text-gray-800">{session.sub_event_name}</p>
-                      </div>
-                    )}
-
                     <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-200/60">
                       <div>
                         <p className="text-xs text-gray-500 uppercase font-semibold">Context</p>
@@ -534,7 +417,7 @@ export default function DynamicQRPage() {
                     </div>
 
                     <div className="pt-1 border-t border-gray-200/60 flex items-center justify-between text-xs text-gray-500">
-                      <span>Session Code: <strong className="font-mono text-gray-800">{session?.session_code}</strong></span>
+                      <span>Session ID: <strong className="font-mono text-gray-800">{session?.id}</strong></span>
                       <span>Started: {session ? new Date(session.started_at).toLocaleTimeString() : ""}</span>
                     </div>
                   </div>
@@ -544,7 +427,7 @@ export default function DynamicQRPage() {
                     <button
                       type="button"
                       onClick={handleServerRotate}
-                      disabled={sessionStatus === "refreshing"}
+                      disabled={!canMutate || !session?.latest_challenge_id || sessionStatus === "refreshing" || ending}
                       className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
                     >
                       <RotateCw className={`h-3.5 w-3.5 ${sessionStatus === "refreshing" ? "animate-spin" : ""}`} />
@@ -554,6 +437,7 @@ export default function DynamicQRPage() {
                     <button
                       type="button"
                       onClick={handleEndSession}
+                      disabled={ending || !canMutate || sessionStatus === "refreshing"}
                       className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-red-700"
                     >
                       <Square className="h-3.5 w-3.5" /> End Attendance Session
@@ -734,7 +618,7 @@ export default function DynamicQRPage() {
                           </span>
                           <div>
                             <p className="font-semibold text-gray-900">
-                              {rec.student_name || rec.associate_name || "Attendee"}
+                              {rec.student_name || rec.associate_name || `${rec.attendance_type}: ${rec.student_id || rec.associate_id}`}
                             </p>
                             {rec.student_reg_number && (
                               <p className="font-mono text-gray-500 text-[10px]">{rec.student_reg_number}</p>

@@ -108,12 +108,12 @@ export function validateEventEligibility(
 }
 
 /**
- * Validates the input payload when an Admin creates a new allocation.
+ * Validates the input payload when creating a new allocation.
  *
  * Rules:
  * 1. Payload must be a non-null object.
  * 2. associateId is required and must not be empty.
- * 3. eventId is required and must not be empty.
+ * 3. eventId or eventNodeId is required and must not be empty.
  * 4. attendanceAccess must be a strict boolean.
  * 5. status, if provided, must be a recognized AllocationStatus.
  *
@@ -134,8 +134,9 @@ export function validateCreateAllocationInput(
     errors.push("Associate ID is required.");
   }
 
-  if (!input.eventId || typeof input.eventId !== "string" || input.eventId.trim() === "") {
-    errors.push("Event ID is required.");
+  const targetEventId = input.eventNodeId || input.eventId;
+  if (!targetEventId || typeof targetEventId !== "string" || targetEventId.trim() === "") {
+    errors.push("Event ID (or Event Node ID) is required.");
   }
 
   if (typeof input.attendanceAccess !== "boolean") {
@@ -155,13 +156,14 @@ export function validateCreateAllocationInput(
 }
 
 /**
- * Validates the input payload when an Admin updates an existing allocation.
+ * Validates the input payload when updating an existing allocation.
  *
  * Rules:
  * 1. Payload must be a non-null object.
- * 2. At least one field (attendanceAccess or status) must be provided.
+ * 2. At least one field (attendanceAccess, status, or isActive) must be provided.
  * 3. If attendanceAccess is provided, it must be a strict boolean.
  * 4. If status is provided, it must be a recognized AllocationStatus.
+ * 5. If isActive is provided, it must be a strict boolean.
  *
  * @param input - The UpdateAllocationInput payload to validate
  * @returns ValidationResult with validity flag and specific error messages
@@ -178,13 +180,20 @@ export function validateUpdateAllocationInput(
 
   const hasAttendanceAccess = input.attendanceAccess !== undefined;
   const hasStatus = input.status !== undefined;
+  const hasIsActive = input.isActive !== undefined;
 
-  if (!hasAttendanceAccess && !hasStatus) {
-    errors.push("Update payload must specify at least one field to change (attendanceAccess or status).");
+  if (!hasAttendanceAccess && !hasStatus && !hasIsActive) {
+    errors.push(
+      "Update payload must specify at least one field to change (attendanceAccess, status, or isActive)."
+    );
   }
 
   if (hasAttendanceAccess && typeof input.attendanceAccess !== "boolean") {
     errors.push("Attendance Access must be a valid boolean (true or false).");
+  }
+
+  if (hasIsActive && typeof input.isActive !== "boolean") {
+    errors.push("isActive must be a valid boolean (true or false).");
   }
 
   if (hasStatus && input.status !== undefined && !VALID_ALLOCATION_STATUSES.includes(input.status)) {
