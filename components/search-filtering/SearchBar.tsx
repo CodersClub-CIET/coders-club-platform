@@ -15,7 +15,7 @@ export default function SearchBar({
     <div>
       <label
         htmlFor="student-search"
-        className="mb-2 block text-sm font-semibold text-gray-800"
+        className="mb-2 block text-[11px] uppercase tracking-wider font-mono text-[#9B9EA6]"
       >
         Search Students
       </label>
@@ -23,7 +23,7 @@ export default function SearchBar({
       <div className="relative">
         <Search
           size={19}
-          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#686C74]"
         />
 
         <input
@@ -32,7 +32,7 @@ export default function SearchBar({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Search by name or register number..."
-          className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-11 pr-4 text-sm text-gray-800 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:ring-4 focus:ring-gray-100"
+          className="w-full rounded-lg border border-[#292D33] bg-[#0D0F12] py-3 pl-11 pr-4 text-sm text-[#F3F1EC] shadow-sm outline-none transition placeholder:text-[#686C74] focus:border-[#FF2A1A]/50"
         />
       </div>
     </div>

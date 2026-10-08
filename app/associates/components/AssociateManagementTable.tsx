@@ -31,6 +31,7 @@ import type {
   UpdateAssociateInput,
 } from "@/lib/associates/types";
 import { useAssociatesRealtime } from "@/lib/associates/use-associates-realtime";
+import { StatusIndicator, MetricCard } from "@/components/ui/cyberpunk";
 
 type ModalMode = "create" | "edit" | null;
 
@@ -269,86 +270,43 @@ export default function AssociateManagementTable() {
     <section className="space-y-6">
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border rounded-2xl p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Total Associates
-            </p>
-            <p className="text-2xl font-black text-slate-900 mt-1">
-              {totalCount}
-            </p>
-          </div>
-
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Users className="size-6" />
-          </div>
-        </div>
-
-        <div className="bg-white border rounded-2xl p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Active Associates
-            </p>
-
-            <p className="text-2xl font-black text-emerald-600 mt-1">
-              {activeCount}
-            </p>
-          </div>
-
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-            <UserCheck className="size-6" />
-          </div>
-        </div>
-
-        <div className="bg-white border rounded-2xl p-5 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Inactive Associates
-            </p>
-
-            <p className="text-2xl font-black text-slate-400 mt-1">
-              {inactiveCount}
-            </p>
-          </div>
-
-          <div className="p-3 bg-slate-100 text-slate-500 rounded-xl">
-            <UserX className="size-6" />
-          </div>
-        </div>
+        <MetricCard title="Total Associates" value={totalCount} />
+        <MetricCard title="Active Associates" value={activeCount} />
+        <MetricCard title="Inactive Associates" value={inactiveCount} />
       </div>
 
       {/* Role Notice & Contract Clarification */}
-      <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-indigo-900">
+      <div className="bg-[#111318] border border-[#292D33] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#F3F1EC]">
         <div className="flex items-start sm:items-center gap-2.5">
-          <Shield className="size-4 text-indigo-600 shrink-0 mt-0.5 sm:mt-0" />
+          <Shield className="size-4 text-[#F2B84B] shrink-0 mt-0.5 sm:mt-0" />
 
           <div>
             <span className="font-bold">Access Level:</span>{" "}
             {isAdmin ? (
-              <span className="text-emerald-700 font-semibold">
+              <span className="text-[#32C979] font-mono">
                 Administrator (Full Management Access)
               </span>
             ) : (
-              <span className="text-slate-700 font-semibold">
+              <span className="text-[#9B9EA6] font-mono">
                 Associate (Read-Only Access via Supabase RLS)
               </span>
             )}
 
-            <p className="text-indigo-700/90 text-[11px] mt-0.5">
+            <p className="text-[#686C74] text-[11px] mt-0.5 font-mono">
               Allocation eligibility is bridged directly from active status.
               Authorization is strictly enforced at database boundary.
             </p>
           </div>
         </div>
 
-        <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white border border-indigo-200 text-indigo-700 shrink-0">
+        <span className="px-2.5 py-1 rounded border border-[#292D33] text-[10px] font-mono uppercase tracking-wider text-[#9B9EA6] shrink-0">
           RLS Protected
         </span>
       </div>
 
       {/* Error Banner */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center justify-between text-xs text-red-700">
+        <div className="bg-[#FF2A1A]/10 border border-[#FF2A1A]/30 rounded-xl p-4 flex items-center justify-between text-xs text-[#FF2A1A]">
           <div className="flex items-center gap-2">
             <AlertCircle className="size-4 shrink-0" />
             <span>{error}</span>
@@ -357,7 +315,7 @@ export default function AssociateManagementTable() {
           <button
             type="button"
             onClick={() => loadAssociates()}
-            className="font-semibold underline hover:text-red-900"
+            className="font-mono underline hover:text-[#C51D16]"
           >
             Retry
           </button>
@@ -365,15 +323,15 @@ export default function AssociateManagementTable() {
       )}
 
       {/* Main Table Card */}
-      <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-[#111318] border border-[#292D33] rounded-xl overflow-hidden">
         {/* Controls Bar */}
-        <div className="p-5 border-b flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="p-5 border-b border-[#292D33] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">
+            <h2 className="text-xl font-bold text-[#F3F1EC]">
               Associates Directory
             </h2>
 
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-[#686C74] mt-0.5 font-mono">
               Manage associate records, contact details, and allocation status.
             </p>
           </div>
@@ -381,14 +339,14 @@ export default function AssociateManagementTable() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
             {/* Search Input */}
             <div className="relative">
-              <Search className="size-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="size-4 text-[#686C74] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
 
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search name, email, phone..."
-                className="w-full sm:w-64 pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+                className="w-full sm:w-64 pl-9 pr-3 py-1.5 text-xs rounded-lg border border-[#292D33] bg-[#0D0F12] text-[#F3F1EC] outline-none focus:border-[#FF2A1A]/50 font-mono"
               />
             </div>
 
@@ -400,7 +358,7 @@ export default function AssociateManagementTable() {
                   e.target.value as "all" | "active" | "inactive",
                 )
               }
-              className="py-1.5 px-3 text-xs rounded-xl border border-slate-300 bg-white outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+              className="py-1.5 px-3 text-xs rounded-lg border border-[#292D33] bg-[#0D0F12] text-[#F3F1EC] outline-none focus:border-[#FF2A1A]/50 font-mono"
             >
               <option value="all">All Status ({totalCount})</option>
               <option value="active">
@@ -412,52 +370,49 @@ export default function AssociateManagementTable() {
             </select>
 
             {/* Refresh Button */}
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={() => loadAssociates()}
               disabled={loading}
               title="Refresh directory"
+              className="inline-flex items-center justify-center gap-1.5 border border-[#3A3E45] bg-[#1D2026] text-[#F3F1EC] hover:bg-[#292D33] rounded-lg px-3 py-1.5 text-xs font-mono uppercase tracking-wider transition disabled:opacity-50"
             >
               <RefreshCw
                 className={`size-3.5 ${loading ? "animate-spin" : ""}`}
               />
 
               <span className="hidden sm:inline">Refresh</span>
-            </Button>
+            </button>
 
             {/* Add Associate (Admin Only) */}
             {isAdmin && (
-              <Button
-                variant="default"
-                size="sm"
+              <button
                 onClick={handleOpenCreate}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold"
+                className="inline-flex items-center justify-center gap-1.5 bg-[#FF2A1A] hover:bg-[#C51D16] text-white rounded-lg px-3 py-1.5 text-xs font-mono uppercase tracking-wider transition"
               >
                 <Plus className="size-3.5" />
                 <span>Add Associate</span>
-              </Button>
+              </button>
             )}
           </div>
         </div>
 
         {/* Loading State */}
         {loading ? (
-          <div className="py-16">
-            <Loading label="Loading associates from database..." />
+          <div className="py-16 text-center text-[#9B9EA6] font-mono text-xs">
+            Loading associates from database...
           </div>
         ) : filteredAssociates.length === 0 ? (
           /* Empty State */
           <div className="py-16 text-center px-4">
-            <div className="size-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+            <div className="size-14 rounded-2xl bg-[#0D0F12] border border-[#292D33] text-[#686C74] flex items-center justify-center mx-auto mb-3">
               <Users className="size-7" />
             </div>
 
-            <h3 className="text-sm font-bold text-slate-800">
+            <h3 className="text-sm font-bold text-[#F3F1EC]">
               No associates found
             </h3>
 
-            <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+            <p className="text-xs text-[#9B9EA6] font-mono max-w-sm mx-auto mt-1">
               {search || statusFilter !== "all"
                 ? "No associate records match your current search and filter criteria."
                 : "No associate records have been added to the platform database yet."}
@@ -465,26 +420,23 @@ export default function AssociateManagementTable() {
 
             <div className="mt-4 flex items-center justify-center gap-2">
               {search || statusFilter !== "all" ? (
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={() => {
                     setSearch("");
                     setStatusFilter("all");
                   }}
+                  className="border border-[#3A3E45] bg-[#1D2026] text-[#F3F1EC] hover:bg-[#292D33] rounded-lg px-3 py-1.5 text-xs font-mono uppercase tracking-wider"
                 >
                   Clear Filters
-                </Button>
+                </button>
               ) : isAdmin ? (
-                <Button
-                  variant="default"
-                  size="sm"
+                <button
                   onClick={handleOpenCreate}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white"
+                  className="bg-[#FF2A1A] hover:bg-[#C51D16] text-white rounded-lg px-3 py-1.5 text-xs font-mono uppercase tracking-wider"
                 >
-                  <Plus className="size-3.5" />
+                  <Plus className="size-3.5 inline mr-1.5" />
                   <span>Add First Associate</span>
-                </Button>
+                </button>
               ) : null}
             </div>
           </div>
@@ -493,7 +445,7 @@ export default function AssociateManagementTable() {
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                <thead className="bg-[#0D0F12] border-b border-[#292D33] text-[#9B9EA6] font-mono uppercase tracking-wider text-[10px]">
                   <tr>
                     <th className="py-3 px-5">Associate</th>
                     <th className="py-3 px-4">Contact</th>
@@ -506,19 +458,19 @@ export default function AssociateManagementTable() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#292D33]">
                   {filteredAssociates.map((associate) => (
                     <tr
                       key={associate.id}
-                      className="hover:bg-slate-50/80 transition-colors"
+                      className="hover:bg-[#1D2026] transition-colors"
                     >
                       {/* Name & ID */}
                       <td className="py-4 px-5">
-                        <div className="font-bold text-slate-900 text-sm">
+                        <div className="font-bold text-[#F3F1EC] text-sm">
                           {associate.name}
                         </div>
 
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        <div className="text-[10px] text-[#686C74] font-mono mt-0.5">
                           ID: {associate.id.slice(0, 8)}...
                         </div>
                       </td>
@@ -526,14 +478,14 @@ export default function AssociateManagementTable() {
                       {/* Contact Info */}
                       <td className="py-4 px-4">
                         <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 text-slate-600">
-                            <Mail className="size-3 text-slate-400 shrink-0" />
+                          <div className="flex items-center gap-1.5 text-[#9B9EA6] font-mono">
+                            <Mail className="size-3 text-[#686C74] shrink-0" />
                             <span>{associate.email || "—"}</span>
                           </div>
 
                           {associate.phone && (
-                            <div className="flex items-center gap-1.5 text-slate-600">
-                              <Phone className="size-3 text-slate-400 shrink-0" />
+                            <div className="flex items-center gap-1.5 text-[#9B9EA6] font-mono">
+                              <Phone className="size-3 text-[#686C74] shrink-0" />
                               <span>{associate.phone}</span>
                             </div>
                           )}
@@ -543,12 +495,12 @@ export default function AssociateManagementTable() {
                       {/* Auth Link Status */}
                       <td className="py-4 px-4">
                         {associate.authUserId ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-[#7FA7FF]/30 bg-[#7FA7FF]/10 text-[10px] font-mono text-[#7FA7FF] uppercase tracking-wider">
                             <CheckCircle2 className="size-3" />
                             <span>Linked Account</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-[#686C74]/30 bg-[#686C74]/10 text-[10px] font-mono text-[#9B9EA6] uppercase tracking-wider">
                             <span>Pending Link</span>
                           </span>
                         )}
@@ -556,27 +508,18 @@ export default function AssociateManagementTable() {
 
                       {/* Active Status */}
                       <td className="py-4 px-4">
-                        {associate.isActive ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span>Active</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                            <span>Inactive</span>
-                          </span>
-                        )}
+                        <StatusIndicator status={associate.isActive ? "active" : "offline"} />
                       </td>
 
                       {/* Allocation Eligibility */}
                       <td className="py-4 px-4">
                         {associate.isActive ? (
-                          <span className="text-[11px] font-medium text-emerald-700 flex items-center gap-1">
-                            <CheckCircle2 className="size-3 text-emerald-600" />
+                          <span className="text-[11px] font-mono text-[#32C979] flex items-center gap-1">
+                            <CheckCircle2 className="size-3 text-[#32C979]" />
                             <span>Eligible for Events</span>
                           </span>
                         ) : (
-                          <span className="text-[11px] text-slate-400">
+                          <span className="text-[11px] font-mono text-[#686C74]">
                             Not eligible (inactive)
                           </span>
                         )}
@@ -585,38 +528,33 @@ export default function AssociateManagementTable() {
                       {/* Admin Actions */}
                       {isAdmin && (
                         <td className="py-4 px-5 text-right">
-                          <div className="inline-flex items-center gap-1.5">
-                            <Button
-                              variant="outline"
-                              size="xs"
+                          <div className="inline-flex items-center gap-2">
+                            <button
                               onClick={() => handleOpenEdit(associate)}
                               title="Edit associate details"
+                              className="border border-[#3A3E45] text-[#9B9EA6] hover:bg-[#1D2026] hover:text-[#F3F1EC] rounded px-2 py-1 text-xs font-mono flex items-center gap-1"
                             >
                               <Edit2 className="size-3" />
                               <span>Edit</span>
-                            </Button>
+                            </button>
 
-                            <Button
-                              variant={
-                                associate.isActive ? "ghost" : "secondary"
-                              }
-                              size="xs"
+                            <button
                               onClick={() => handleToggleActive(associate)}
-                              className={
-                                associate.isActive
-                                  ? "text-slate-600 hover:text-red-700 hover:bg-red-50"
-                                  : "text-emerald-700 hover:bg-emerald-50"
-                              }
                               title={
                                 associate.isActive
                                   ? "Deactivate associate"
                                   : "Activate associate"
                               }
+                              className={
+                                associate.isActive
+                                  ? "border border-[#FF2A1A]/40 text-[#FF2A1A] hover:bg-[#FF2A1A]/10 rounded px-2 py-1 text-xs font-mono"
+                                  : "border border-[#32C979]/40 text-[#32C979] hover:bg-[#32C979]/10 rounded px-2 py-1 text-xs font-mono"
+                              }
                             >
                               {associate.isActive
                                 ? "Deactivate"
                                 : "Activate"}
-                            </Button>
+                            </button>
                           </div>
                         </td>
                       )}
@@ -627,49 +565,41 @@ export default function AssociateManagementTable() {
             </div>
 
             {/* Mobile Cards View */}
-            <div className="block md:hidden divide-y divide-slate-100">
+            <div className="block md:hidden divide-y divide-[#292D33]">
               {filteredAssociates.map((associate) => (
                 <div key={associate.id} className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h4 className="font-bold text-slate-900 text-sm">
+                      <h4 className="font-bold text-[#F3F1EC] text-sm">
                         {associate.name}
                       </h4>
 
-                      <p className="text-[10px] text-slate-400 font-mono">
+                      <p className="text-[10px] text-[#686C74] font-mono">
                         ID: {associate.id.slice(0, 8)}...
                       </p>
                     </div>
 
                     <div className="shrink-0">
-                      {associate.isActive ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
-                          Inactive
-                        </span>
-                      )}
+                      <StatusIndicator status={associate.isActive ? "active" : "offline"} />
                     </div>
                   </div>
 
-                  <div className="space-y-1 text-xs text-slate-600">
+                  <div className="space-y-1 text-xs font-mono text-[#9B9EA6]">
                     <div className="flex items-center gap-1.5">
-                      <Mail className="size-3 text-slate-400" />
+                      <Mail className="size-3 text-[#686C74]" />
                       <span>{associate.email || "No email"}</span>
                     </div>
 
                     {associate.phone && (
                       <div className="flex items-center gap-1.5">
-                        <Phone className="size-3 text-slate-400" />
+                        <Phone className="size-3 text-[#686C74]" />
                         <span>{associate.phone}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t text-[11px]">
-                    <span className="text-slate-500">
+                  <div className="flex items-center justify-between pt-2 border-t border-[#292D33] text-[11px] font-mono">
+                    <span className="text-[#686C74]">
                       {associate.authUserId
                         ? "Account linked"
                         : "Pending account link"}
@@ -677,29 +607,26 @@ export default function AssociateManagementTable() {
 
                     {isAdmin && (
                       <div className="flex items-center gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="xs"
+                        <button
                           onClick={() => handleOpenEdit(associate)}
+                          className="border border-[#3A3E45] text-[#9B9EA6] hover:bg-[#1D2026] hover:text-[#F3F1EC] rounded px-2 py-1 text-xs font-mono flex items-center gap-1"
                         >
                           <Edit2 className="size-3" />
                           <span>Edit</span>
-                        </Button>
+                        </button>
 
-                        <Button
-                          variant="ghost"
-                          size="xs"
+                        <button
                           onClick={() => handleToggleActive(associate)}
                           className={
                             associate.isActive
-                              ? "text-red-600"
-                              : "text-emerald-600"
+                              ? "border border-[#FF2A1A]/40 text-[#FF2A1A] hover:bg-[#FF2A1A]/10 rounded px-2 py-1 text-xs font-mono"
+                              : "border border-[#32C979]/40 text-[#32C979] hover:bg-[#32C979]/10 rounded px-2 py-1 text-xs font-mono"
                           }
                         >
                           {associate.isActive
                             ? "Deactivate"
                             : "Activate"}
-                        </Button>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -708,13 +635,13 @@ export default function AssociateManagementTable() {
             </div>
 
             {/* Footer Summary */}
-            <div className="p-4 border-t bg-slate-50/50 flex items-center justify-between text-xs text-slate-500">
+            <div className="p-4 border-t border-[#292D33] bg-[#0D0F12] flex items-center justify-between text-xs font-mono text-[#686C74]">
               <span>
                 Showing {filteredAssociates.length} of {associates.length}{" "}
                 associates
               </span>
 
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[10px]">
                 Database: public.associates
               </span>
             </div>
@@ -727,19 +654,19 @@ export default function AssociateManagementTable() {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#08090B]/80 backdrop-blur-sm p-4"
         >
-          <div className="bg-white border rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in-0 zoom-in-95">
+          <div className="bg-[#111318] border border-[#292D33] rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in-0 zoom-in-95">
             {/* Modal Header */}
-            <div className="p-5 border-b flex items-center justify-between">
+            <div className="p-5 border-b border-[#292D33] flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-slate-900 text-base">
+                <h3 className="font-bold text-[#F3F1EC] text-base">
                   {modalMode === "create"
                     ? "Add New Associate"
                     : "Edit Associate"}
                 </h3>
 
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs font-mono text-[#686C74] mt-0.5">
                   {modalMode === "create"
                     ? "Create an associate record adhering to database schema."
                     : `Editing record for ${selectedAssociate?.name}.`}
@@ -749,7 +676,7 @@ export default function AssociateManagementTable() {
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+                className="text-[#686C74] hover:text-[#F3F1EC] p-1 rounded-lg hover:bg-[#1D2026]"
               >
                 <X className="size-4" />
               </button>
@@ -758,7 +685,7 @@ export default function AssociateManagementTable() {
             {/* Modal Form */}
             <form onSubmit={handleSubmitForm} className="p-5 space-y-4">
               {formErrors.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 space-y-1">
+                <div className="bg-[#FF2A1A]/10 border border-[#FF2A1A]/30 rounded-xl p-3 text-xs text-[#FF2A1A] space-y-1 font-mono">
                   {formErrors.map((err, idx) => (
                     <div key={idx} className="flex items-center gap-1.5">
                       <AlertCircle className="size-3.5 shrink-0" />
@@ -770,8 +697,8 @@ export default function AssociateManagementTable() {
 
               {/* Name field */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 block">
-                  Associate Name <span className="text-red-500">*</span>
+                <label className="text-[11px] font-mono uppercase tracking-wider text-[#9B9EA6] block">
+                  Associate Name <span className="text-[#FF2A1A]">*</span>
                 </label>
 
                 <input
@@ -785,13 +712,13 @@ export default function AssociateManagementTable() {
                     }))
                   }
                   placeholder="e.g. Kavya Murugan"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+                  className="w-full bg-[#0D0F12] border border-[#292D33] text-[#F3F1EC] rounded-lg px-3 py-2 text-xs focus:border-[#FF2A1A]/50 focus:outline-none font-mono"
                 />
               </div>
 
               {/* Email field */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 block">
+                <label className="text-[11px] font-mono uppercase tracking-wider text-[#9B9EA6] block">
                   Email Address
                 </label>
 
@@ -805,13 +732,13 @@ export default function AssociateManagementTable() {
                     }))
                   }
                   placeholder="e.g. kavya@codersclub.edu"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+                  className="w-full bg-[#0D0F12] border border-[#292D33] text-[#F3F1EC] rounded-lg px-3 py-2 text-xs focus:border-[#FF2A1A]/50 focus:outline-none font-mono"
                 />
               </div>
 
               {/* Phone field */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 block">
+                <label className="text-[11px] font-mono uppercase tracking-wider text-[#9B9EA6] block">
                   Contact Phone
                 </label>
 
@@ -825,13 +752,13 @@ export default function AssociateManagementTable() {
                     }))
                   }
                   placeholder="e.g. +91 9876543210"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+                  className="w-full bg-[#0D0F12] border border-[#292D33] text-[#F3F1EC] rounded-lg px-3 py-2 text-xs focus:border-[#FF2A1A]/50 focus:outline-none font-mono"
                 />
               </div>
 
               {/* Active status checkbox */}
               <div className="pt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#F3F1EC]">
                   <input
                     type="checkbox"
                     checked={formData.isActive}
@@ -841,7 +768,7 @@ export default function AssociateManagementTable() {
                         isActive: e.target.checked,
                       }))
                     }
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    className="rounded border-[#292D33] bg-[#0D0F12] accent-[#FF2A1A]"
                   />
 
                   <span>
@@ -851,38 +778,35 @@ export default function AssociateManagementTable() {
               </div>
 
               {/* Notice */}
-              <p className="text-[11px] text-slate-400 leading-relaxed pt-1">
+              <p className="text-[10px] font-mono text-[#686C74] leading-relaxed pt-1">
                 Note: Operates strictly within the live{" "}
-                <code className="text-slate-600">public.associates</code>{" "}
+                <code className="text-[#9B9EA6]">public.associates</code>{" "}
                 database schema. Inserts and updates are authorized by
                 Supabase RLS.
               </p>
 
               {/* Modal Buttons */}
-              <div className="pt-3 border-t flex items-center justify-end gap-2">
-                <Button
+              <div className="pt-3 border-t border-[#292D33] flex items-center justify-end gap-2">
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   onClick={handleCloseModal}
                   disabled={saving}
+                  className="bg-[#1D2026] border border-[#3A3E45] text-[#F3F1EC] rounded-lg px-3.5 py-2 text-xs font-mono uppercase tracking-wider hover:bg-[#292D33] transition disabled:opacity-50"
                 >
                   Cancel
-                </Button>
+                </button>
 
-                <Button
+                <button
                   type="submit"
-                  variant="default"
-                  size="sm"
                   disabled={saving}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold"
+                  className="bg-[#FF2A1A] hover:bg-[#C51D16] text-white rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-wider transition disabled:opacity-50"
                 >
                   {saving
                     ? "Saving..."
                     : modalMode === "create"
                       ? "Create Associate"
                       : "Save Changes"}
-                </Button>
+                </button>
               </div>
             </form>
           </div>

@@ -1,272 +1,278 @@
+import { createClient } from "@/lib/supabase/client";
 import type {
   CreateEventInput,
   CreateSubEventInput,
   Event,
   EventFilter,
+  EventStatus,
   SubEvent,
   UpdateEventInput,
   UpdateSubEventInput,
 } from "./types";
 
-const STORAGE_KEY = "coders_club_events";
+type EventNodeRow = {
+  id: string;
+  parent_id: string | null;
+  name: string;
+  status: EventStatus;
+  starts_at: string | null;
+  ends_at: string | null;
+  location: string | null;
+  description: string | null;
+  event_type: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+};
 
-const SEED_EVENTS: Event[] = [
-  {
-    id: "evt-01",
-    name: "Full Stack Web Development Hackathon",
-    date: "2026-10-15",
-    time: "09:00",
-    venue: "Innovation Lab",
-    description: "Full stack development hackathon for Coders Club members.",
-    status: "upcoming",
-    subEvents: [
-      {
-        id: "sub-01",
-        eventId: "evt-01",
-        name: "Round 1: Rapid Prototyping",
-        date: "2026-10-15",
-        time: "09:30",
-        venue: "Innovation Lab",
-        description: "Rapid prototyping round.",
-      },
-      {
-        id: "sub-02",
-        eventId: "evt-01",
-        name: "Round 2: API Integration & Defense",
-        date: "2026-10-15",
-        time: "14:00",
-        venue: "Innovation Lab",
-        description: "API integration and project defense.",
-      },
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "evt-02",
-    name: "Algorithmic Problem Solving Workshop",
-    date: "2026-11-05",
-    time: "10:00",
-    venue: "Seminar Hall",
-    description: "Problem solving and competitive programming workshop.",
-    status: "upcoming",
+const NODE_COLUMNS =
+  "id,parent_id,name,status,starts_at,ends_at,location,description,event_type,created_by,created_at,updated_at,is_active";
+
+function datePart(value: string | null): string {
+  return value ? value.slice(0, 10) : "";
+}
+
+function timePart(value: string | null): string {
+  return value ? value.slice(11, 16) : "";
+}
+
+function toTimestamp(date: string, time: string): string {
+  return new Date(`${date}T${time || "00:00"}:00`).toISOString();
+}
+
+function toDbStatus(status?: EventStatus): string {
+  if (status === "active") return "ongoing";
+  if (status === "completed") return "completed";
+  return "published";
+}
+
+function toUiStatus(dbStatus: string): EventStatus {
+  if (dbStatus === "ongoing") return "active";
+  if (dbStatus === "completed") return "completed";
+  return "upcoming";
+}
+
+function mapNode(row: EventNodeRow): Event {
+  return {
+    id: row.id,
+    name: row.name,
+    date: datePart(row.starts_at),
+    time: timePart(row.starts_at),
+    venue: row.location ?? "",
+    description: row.description ?? "",
+    status: toUiStatus(row.status),
     subEvents: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapSubNode(row: EventNodeRow): SubEvent {
+  return {
+    id: row.id,
+    eventId: row.parent_id ?? "",
+    name: row.name,
+    date: datePart(row.starts_at),
+    time: timePart(row.starts_at),
+    venue: row.location ?? "",
+    description: row.description ?? "",
+  };
+}
+
+function buildHierarchy(rows: EventNodeRow[]): Event[] {
+  const nodes = new Map(rows.map((row) => [row.id, row]));
+  const events = new Map<string, Event>();
+  rows.forEach((row) => {
+    if (!row.parent_id || !nodes.has(row.parent_id)) events.set(row.id, mapNode(row));
+  });
+
+  rows.forEach((row) => {
+    if (!row.parent_id || !nodes.has(row.parent_id)) return;
+    const parent = events.get(row.parent_id);
+    if (parent) parent.subEvents = [...(parent.subEvents ?? []), mapSubNode(row)];
+  });
+
+  return [...events.values()];
+}
+
+async function requireAdmin() {
+  const supabase = createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Authentication required.");
+  const { data: profile, error } = await supabase
+    .from("user_profiles")
+    .select("role,is_active")
+    .eq("id", auth.user.id)
+    .maybeSingle();
+  if (error) throw new Error(`Unable to verify authorization: ${error.message}`);
+  if (profile?.role !== "admin" || profile.is_active !== true) {
+    throw new Error("Only active administrators can manage events.");
+  }
+  return { supabase, userId: auth.user.id };
+}
+
+async function assignedNodeIds() {
+  const supabase = createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return [];
+  const associate = await supabase
+    .from("associates")
+    .select("id")
+    .eq("auth_user_id", auth.user.id)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (associate.error) throw new Error(`Unable to load Associate access: ${associate.error.message}`);
+  if (!associate.data) return [];
+  const allocations = await supabase
+    .from("associate_allocations")
+    .select("event_node_id")
+    .eq("associate_id", associate.data.id)
+    .eq("is_active", true);
+  if (allocations.error) throw new Error(`Unable to load event allocations: ${allocations.error.message}`);
+  return [...new Set((allocations.data ?? []).map((row) => row.event_node_id))];
+}
 
 class EventManagementService {
-  private inMemoryEvents: Event[] = [...SEED_EVENTS];
-
-  private getStoredEvents(): Event[] {
-    if (typeof window === "undefined") {
-      return [...this.inMemoryEvents];
-    }
-
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-
-      if (!raw) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_EVENTS));
-        return [...SEED_EVENTS];
-      }
-
-      return JSON.parse(raw) as Event[];
-    } catch {
-      return [...this.inMemoryEvents];
-    }
-  }
-
-  private saveEvents(events: Event[]): void {
-    this.inMemoryEvents = events;
-
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-      } catch {
-        // Keep in-memory fallback.
-      }
-    }
-  }
-
   async getEvents(filter?: EventFilter): Promise<Event[]> {
-    let events = this.getStoredEvents();
+    const supabase = createClient();
+    const { data: auth } = await supabase.auth.getUser();
+    let query = supabase
+      .from("event_nodes")
+      .select(NODE_COLUMNS)
+      .eq("is_active", true)
+      .order("starts_at", { ascending: true });
 
-    if (!filter) {
-      return events;
+    if (auth.user) {
+      const profile = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("id", auth.user.id)
+        .maybeSingle();
+      if (profile.error) throw new Error(`Unable to verify access: ${profile.error.message}`);
+      if (profile.data?.role === "associate") {
+        const ids = await assignedNodeIds();
+        if (ids.length === 0) return [];
+        query = query.in("id", ids);
+      }
     }
 
-    if (filter.status) {
-      events = events.filter((event) => event.status === filter.status);
-    }
-
-    if (filter.search?.trim()) {
-      const query = filter.search.toLowerCase().trim();
-
-      events = events.filter(
-        (event) =>
-          event.name.toLowerCase().includes(query) ||
-          event.venue.toLowerCase().includes(query) ||
-          event.description.toLowerCase().includes(query)
+    const { data, error } = await query;
+    if (error) throw new Error(`Unable to load events: ${error.message}`);
+    let events = buildHierarchy((data ?? []) as EventNodeRow[]);
+    if (filter?.status) events = events.filter((event) => event.status === filter.status);
+    if (filter?.search?.trim()) {
+      const term = filter.search.trim().toLowerCase();
+      events = events.filter((event) =>
+        [event.name, event.venue, event.description].some((value) =>
+          value.toLowerCase().includes(term),
+        ),
       );
     }
-
     return events;
   }
 
   async getEventById(id: string): Promise<Event | null> {
-    return this.getStoredEvents().find((event) => event.id === id) ?? null;
+    const events = await this.getEvents();
+    return events.find((event) => event.id === id) ?? null;
   }
 
   async createEvent(input: CreateEventInput): Promise<Event> {
-    const events = this.getStoredEvents();
-    const now = new Date().toISOString();
-
-    const event: Event = {
-      id: `evt-${Date.now().toString(36)}`,
-      ...input,
-      status: "upcoming",
-      subEvents: [],
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    this.saveEvents([event, ...events]);
-
-    return event;
+    return this.createNode(input, null);
   }
 
-  async updateEvent(
-    id: string,
-    input: UpdateEventInput
-  ): Promise<Event> {
-    const events = this.getStoredEvents();
-    const index = events.findIndex((event) => event.id === id);
-
-    if (index === -1) {
-      throw new Error("Event not found.");
+  async updateEvent(id: string, input: UpdateEventInput): Promise<Event> {
+    const { supabase } = await requireAdmin();
+    const updates: Record<string, unknown> = {};
+    if (input.name !== undefined) updates.name = input.name;
+    if (input.status !== undefined) updates.status = toDbStatus(input.status);
+    if (input.date !== undefined || input.time !== undefined) {
+      const current = await this.getEventById(id);
+      if (!current) throw new Error("Event not found.");
+      updates.starts_at = toTimestamp(input.date ?? current.date, input.time ?? current.time);
     }
-
-    const updatedEvent: Event = {
-      ...events[index],
-      ...input,
-      updatedAt: new Date().toISOString(),
-    };
-
-    events[index] = updatedEvent;
-    this.saveEvents(events);
-
-    return updatedEvent;
+    if (input.venue !== undefined) updates.location = input.venue;
+    if (input.description !== undefined) updates.description = input.description;
+    const result = await supabase.from("event_nodes").update(updates).eq("id", id).select(NODE_COLUMNS).single();
+    if (result.error) throw new Error(`Unable to update event: ${result.error.message}`);
+    const updated = mapNode(result.data as EventNodeRow);
+    updated.subEvents = (await this.getEventById(id))?.subEvents ?? [];
+    return updated;
   }
 
   async deleteEvent(id: string): Promise<void> {
-    const events = this.getStoredEvents();
-
-    const exists = events.some((event) => event.id === id);
-
-    if (!exists) {
-      throw new Error("Event not found.");
-    }
-
-    this.saveEvents(events.filter((event) => event.id !== id));
+    const { supabase } = await requireAdmin();
+    const { error } = await supabase.from("event_nodes").update({ is_active: false }).eq("id", id);
+    if (error) throw new Error(`Unable to deactivate event: ${error.message}`);
   }
 
   async createSubEvent(input: CreateSubEventInput): Promise<SubEvent> {
-    const events = this.getStoredEvents();
-    const eventIndex = events.findIndex(
-      (event) => event.id === input.eventId
-    );
-
-    if (eventIndex === -1) {
-      throw new Error("Parent event not found.");
-    }
-
-    const subEvent: SubEvent = {
-      id: `sub-${Date.now().toString(36)}`,
-      ...input,
-    };
-
-    const event = events[eventIndex];
-
-    events[eventIndex] = {
-      ...event,
-      subEvents: [...(event.subEvents ?? []), subEvent],
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.saveEvents(events);
-
-    return subEvent;
+    return this.createNode(input, input.eventId).then((event) => ({
+      id: event.id,
+      eventId: input.eventId,
+      name: event.name,
+      date: event.date,
+      time: event.time,
+      venue: event.venue,
+      description: event.description,
+    }));
   }
 
-  async updateSubEvent(
-    eventId: string,
-    subEventId: string,
-    input: UpdateSubEventInput
-  ): Promise<SubEvent> {
-    const events = this.getStoredEvents();
-    const eventIndex = events.findIndex((event) => event.id === eventId);
-
-    if (eventIndex === -1) {
-      throw new Error("Parent event not found.");
+  async updateSubEvent(eventId: string, subEventId: string, input: UpdateSubEventInput): Promise<SubEvent> {
+    const { supabase } = await requireAdmin();
+    const updates: Record<string, unknown> = {};
+    if (input.name !== undefined) updates.name = input.name;
+    if (input.venue !== undefined) updates.location = input.venue;
+    if (input.description !== undefined) updates.description = input.description;
+    if (input.date !== undefined || input.time !== undefined) {
+      const parent = await this.getEventById(eventId);
+      const child = parent?.subEvents?.find((item) => item.id === subEventId);
+      if (!child) throw new Error("Sub-event not found.");
+      updates.starts_at = toTimestamp(input.date ?? child.date, input.time ?? child.time);
     }
-
-    const event = events[eventIndex];
-    const subEvents = [...(event.subEvents ?? [])];
-    const subEventIndex = subEvents.findIndex(
-      (subEvent) => subEvent.id === subEventId
-    );
-
-    if (subEventIndex === -1) {
-      throw new Error("Sub-event not found.");
-    }
-
-    const updatedSubEvent = {
-      ...subEvents[subEventIndex],
-      ...input,
-    };
-
-    subEvents[subEventIndex] = updatedSubEvent;
-
-    events[eventIndex] = {
-      ...event,
-      subEvents,
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.saveEvents(events);
-
-    return updatedSubEvent;
+    const result = await supabase.from("event_nodes").update(updates).eq("id", subEventId).eq("parent_id", eventId)
+      .select(NODE_COLUMNS).single();
+    if (result.error) throw new Error(`Unable to update sub-event: ${result.error.message}`);
+    return mapSubNode(result.data as EventNodeRow);
   }
 
-  async deleteSubEvent(
-    eventId: string,
-    subEventId: string
-  ): Promise<void> {
-    const events = this.getStoredEvents();
-    const eventIndex = events.findIndex((event) => event.id === eventId);
+  async deleteSubEvent(eventId: string, subEventId: string): Promise<void> {
+    const { supabase } = await requireAdmin();
+    const { error } = await supabase.from("event_nodes").update({ is_active: false }).eq("id", subEventId).eq("parent_id", eventId);
+    if (error) throw new Error(`Unable to deactivate sub-event: ${error.message}`);
+  }
 
-    if (eventIndex === -1) {
-      throw new Error("Parent event not found.");
+  private async createNode(input: CreateEventInput | CreateSubEventInput, parentId: string | null): Promise<Event> {
+    const { supabase, userId } = await requireAdmin();
+    const { data: yearRow } = await supabase
+      .from("academic_years")
+      .select("id")
+      .eq("is_current", true)
+      .maybeSingle();
+
+    let academicYearId = yearRow?.id;
+    if (!academicYearId) {
+      const { data: anyYear } = await supabase
+        .from("academic_years")
+        .select("id")
+        .limit(1)
+        .maybeSingle();
+      academicYearId = anyYear?.id;
     }
 
-    const event = events[eventIndex];
-    const subEvents = event.subEvents ?? [];
-
-    if (!subEvents.some((subEvent) => subEvent.id === subEventId)) {
-      throw new Error("Sub-event not found.");
-    }
-
-    events[eventIndex] = {
-      ...event,
-      subEvents: subEvents.filter(
-        (subEvent) => subEvent.id !== subEventId
-      ),
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.saveEvents(events);
+    const result = await supabase.from("event_nodes").insert({
+      parent_id: parentId,
+      name: input.name,
+      academic_year_id: academicYearId,
+      status: "published",
+      starts_at: toTimestamp(input.date, input.time),
+      location: input.venue,
+      description: input.description,
+      created_by: userId,
+      is_active: true,
+    }).select(NODE_COLUMNS).single();
+    if (result.error) throw new Error(`Unable to create event: ${result.error.message}`);
+    return mapNode(result.data as EventNodeRow);
   }
 }
 

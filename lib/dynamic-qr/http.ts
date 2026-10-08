@@ -117,8 +117,9 @@ export async function handleQR(request: Request, operation: QROperation, deps: Q
     return reply({success: false, message: error instanceof QRHttpError ? error.message : "Unable to complete this request."}, status);
   }
 }
-export function databaseError(error: {code?: string} | null) {
+export function databaseError(error: {code?: string; message?: string; details?: string; hint?: string} | null) {
   if (!error) return;
+  console.error("[dynamic-qr] Database error:", error.code, error.message, error.details, error.hint);
   const statuses: Record<string, number> = {"42501":403, "22023":400, P0001:409, P0002:404, "23505":409};
   const status = statuses[error.code ?? ""] ?? 500;
   const messages: Record<number, string> = {400:"Invalid request.",403:"Permission denied.",404:"Resource not found or inaccessible.",409:"State changed. Reload before retrying.",500:"Database operation unavailable."};

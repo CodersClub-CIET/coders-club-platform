@@ -30,11 +30,11 @@ export default function FilterPanel({
   onClear,
 }: FilterPanelProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-[#292D33] bg-[#111318] p-5 shadow-sm">
       <div className="mb-5 flex items-center gap-2">
-        <SlidersHorizontal size={18} className="text-gray-600" />
+        <SlidersHorizontal size={18} className="text-[#9B9EA6]" />
 
-        <h2 className="text-sm font-semibold text-gray-800">
+        <h2 className="text-sm font-bold text-[#F3F1EC] uppercase tracking-wider font-mono">
           Filters
         </h2>
       </div>
@@ -43,7 +43,7 @@ export default function FilterPanel({
         <div>
           <label
             htmlFor="academic-year"
-            className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+            className="mb-2 block text-[11px] font-mono uppercase tracking-widest text-[#9B9EA6]"
           >
             Academic Year
           </label>
@@ -54,7 +54,7 @@ export default function FilterPanel({
             onChange={(event) =>
               onAcademicYearChange(event.target.value)
             }
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100"
+            className="w-full rounded-lg border border-[#292D33] bg-[#0D0F12] px-3 py-2.5 text-sm text-[#F3F1EC] outline-none transition focus:border-[#FF2A1A]/50"
           >
             <option value="">All Years</option>
 
@@ -69,7 +69,7 @@ export default function FilterPanel({
         <div>
           <label
             htmlFor="class"
-            className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+            className="mb-2 block text-[11px] font-mono uppercase tracking-widest text-[#9B9EA6]"
           >
             Class
           </label>
@@ -78,7 +78,7 @@ export default function FilterPanel({
             id="class"
             value={className}
             onChange={(event) => onClassChange(event.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100"
+            className="w-full rounded-lg border border-[#292D33] bg-[#0D0F12] px-3 py-2.5 text-sm text-[#F3F1EC] outline-none transition focus:border-[#FF2A1A]/50"
           >
             <option value="">All Classes</option>
 
@@ -93,7 +93,7 @@ export default function FilterPanel({
         <div>
           <label
             htmlFor="section"
-            className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+            className="mb-2 block text-[11px] font-mono uppercase tracking-widest text-[#9B9EA6]"
           >
             Section
           </label>
@@ -102,7 +102,7 @@ export default function FilterPanel({
             id="section"
             value={section}
             onChange={(event) => onSectionChange(event.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100"
+            className="w-full rounded-lg border border-[#292D33] bg-[#0D0F12] px-3 py-2.5 text-sm text-[#F3F1EC] outline-none transition focus:border-[#FF2A1A]/50"
           >
             <option value="">All Sections</option>
 
@@ -118,7 +118,7 @@ export default function FilterPanel({
           <button
             type="button"
             onClick={onClear}
-            className="w-full rounded-lg border border-gray-200 bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
+            className="w-full rounded-lg bg-[#FF2A1A] hover:bg-[#C51D16] px-4 py-2.5 text-[11px] uppercase tracking-wider font-mono font-bold text-white transition"
           >
             Clear Filters
           </button>

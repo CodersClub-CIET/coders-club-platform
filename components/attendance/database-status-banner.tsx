@@ -138,7 +138,7 @@ export default function DatabaseStatusBanner() {
               href="https://supabase.com/dashboard/project/acnhfntawflgkomksddp/sql/new"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white hover:bg-amber-100/60 text-amber-900 border border-amber-300 transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#111318] hover:bg-amber-100/60 text-amber-900 border border-amber-300 transition-all"
             >
               <ExternalLink className="size-3.5" />
               <span>SQL Editor</span>
@@ -169,22 +169,22 @@ export default function DatabaseStatusBanner() {
       {/* SQL Migration Instructions Modal */}
       {showSqlModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-[#111318] rounded-2xl shadow-2xl border border-[#292D33] max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <div className="px-6 py-4 border-b border-[#292D33] flex items-center justify-between bg-[#08090B]/70">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                <div className="p-2 rounded-lg bg-[#FF2A1A]/10 text-[#FF2A1A]">
                   <Database className="size-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Supabase Database Setup</h3>
-                  <p className="text-xs text-slate-500 font-mono">Project: acnhfntawflgkomksddp</p>
+                  <h3 className="font-bold text-[#F3F1EC] text-sm">Supabase Database Setup</h3>
+                  <p className="text-xs text-[#686C74] font-mono">Project: acnhfntawflgkomksddp</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowSqlModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
+                className="p-1.5 rounded-lg text-[#686C74] hover:text-[#9B9EA6] hover:bg-[#171A20] transition-all"
               >
                 <X className="size-4" />
               </button>
@@ -192,9 +192,9 @@ export default function DatabaseStatusBanner() {
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-4">
-              <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4 text-xs text-indigo-950">
+              <div className="bg-[#FF2A1A]/10/70 border border-indigo-200 rounded-xl p-4 text-xs text-indigo-950">
                 <p className="font-bold mb-2">Instructions to enable cloud sync:</p>
-                <ol className="list-decimal list-inside space-y-1 text-slate-700">
+                <ol className="list-decimal list-inside space-y-1 text-[#9B9EA6]">
                   <li>
                     Click the <strong>Copy SQL Script</strong> button below.
                   </li>
@@ -204,7 +204,7 @@ export default function DatabaseStatusBanner() {
                       href="https://supabase.com/dashboard/project/acnhfntawflgkomksddp/sql/new"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-indigo-600 font-semibold underline"
+                      className="text-[#FF2A1A] font-semibold underline"
                     >
                       Supabase SQL Editor
                     </a>{" "}
@@ -221,29 +221,29 @@ export default function DatabaseStatusBanner() {
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-700">Migration SQL Script</span>
+                  <span className="text-xs font-bold text-[#9B9EA6]">Migration SQL Script</span>
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#FF2A1A] hover:text-indigo-700"
                   >
                     {copied ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3" />}
                     <span>{copied ? "Copied!" : "Copy Full SQL"}</span>
                   </button>
                 </div>
-                <div className="bg-slate-900 text-slate-200 rounded-xl p-4 font-mono text-[11px] max-h-64 overflow-y-auto border border-slate-800">
+                <div className="bg-[#08090B] text-slate-200 rounded-xl p-4 font-mono text-[11px] max-h-64 overflow-y-auto border border-slate-800">
                   <pre>{ATTENDANCE_MIGRATION_SQL}</pre>
                 </div>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+            <div className="px-6 py-4 border-t border-[#292D33] bg-[#08090B] flex items-center justify-between">
               <button
                 type="button"
                 onClick={checkStatus}
                 disabled={status.loading}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-[#111318] border border-[#292D33] hover:bg-[#171A20] text-[#9B9EA6] transition-all"
               >
                 <RefreshCw className={`size-3.5 ${status.loading ? "animate-spin" : ""}`} />
                 <span>Test Connection</span>
@@ -254,7 +254,7 @@ export default function DatabaseStatusBanner() {
                   href="https://supabase.com/dashboard/project/acnhfntawflgkomksddp/sql/new"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-[#FF2A1A]/10 border border-indigo-200 hover:bg-[#FF2A1A]/20 text-indigo-700 transition-all"
                 >
                   <ExternalLink className="size-3.5" />
                   <span>Open Supabase SQL Editor</span>
@@ -262,7 +262,7 @@ export default function DatabaseStatusBanner() {
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-[#FF2A1A] hover:bg-[#C51D16] text-white shadow-sm transition-all"
                 >
                   {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                   <span>{copied ? "Copied to Clipboard" : "Copy SQL Script"}</span>

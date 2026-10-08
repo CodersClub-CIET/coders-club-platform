@@ -1,9 +1,18 @@
 import StudentPerformanceView from "@/components/performance/student-performance-view";
+import { PageHeader } from "@/components/ui/cyberpunk";
+import { TrendingUp } from "lucide-react";
 
 export default function StudentPerformancePage() {
   return (
-    <main className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="space-y-6">
+      <PageHeader 
+        moduleCode="EVAL // 05" 
+        category="PERFORMANCE" 
+        title="Performance Analytics" 
+        description="View and analyze performance metrics across the system."
+        icon={TrendingUp} 
+      />
       <StudentPerformanceView />
-    </main>
+    </div>
   );
 }

@@ -23,6 +23,7 @@ import type {
 } from "@/lib/event-management/types";
 
 import { eventManagementService } from "@/lib/event-management/service";
+import { useAuth } from "@/lib/auth/use-auth";
 
 import {
   validateCreateEventInput,
@@ -58,10 +59,12 @@ const emptySubEventForm: CreateSubEventInput = {
 const statusClasses: Record<EventStatus, string> = {
   upcoming: "bg-blue-100 text-blue-700 border-blue-200",
   active: "bg-green-100 text-green-700 border-green-200",
-  completed: "bg-slate-100 text-slate-700 border-slate-200",
+  completed: "bg-[#171A20] text-[#9B9EA6] border-[#292D33]",
 };
 
 export default function EventManagementTable() {
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -419,38 +422,40 @@ export default function EventManagementTable() {
 
   return (
     <>
-      <section className="rounded-2xl bg-white shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-slate-200">
+      <section className="rounded-2xl bg-[#111318] shadow-sm border border-[#292D33] overflow-hidden">
+        <div className="p-5 sm:p-6 border-b border-[#292D33]">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-[#F3F1EC]">
                 Events
               </h2>
 
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-sm text-[#686C74] mt-1">
                 Manage master events and their optional sub-events.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={openCreateEvent}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition"
-            >
-              <Plus className="h-4 w-4" />
-              Create Event
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={openCreateEvent}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#FF2A1A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#C51D16] transition"
+              >
+                <Plus className="h-4 w-4" />
+                Create Event
+              </button>
+            )}
           </div>
 
           <div className="mt-5 flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#686C74]" />
 
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search events, venues, descriptions..."
-                className="w-full rounded-lg border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                className="w-full rounded-lg border border-[#3A3E45] bg-[#111318] pl-10 pr-4 py-2.5 text-sm text-[#F3F1EC] outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30"
               />
             </div>
 
@@ -461,7 +466,7 @@ export default function EventManagementTable() {
                   e.target.value as "all" | EventStatus
                 )
               }
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="rounded-lg border border-[#3A3E45] bg-[#111318] px-4 py-2.5 text-sm text-[#9B9EA6] outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30"
             >
               <option value="all">All Statuses</option>
               <option value="upcoming">Upcoming</option>
@@ -472,7 +477,7 @@ export default function EventManagementTable() {
             <button
               type="button"
               onClick={loadEvents}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#3A3E45] px-4 py-2.5 text-sm font-medium text-[#9B9EA6] hover:bg-[#08090B] transition"
             >
               <RefreshCw className="h-4 w-4" />
               Refresh
@@ -487,72 +492,72 @@ export default function EventManagementTable() {
         )}
 
         {loading ? (
-          <div className="p-10 text-center text-sm text-slate-500">
+          <div className="p-10 text-center text-sm text-[#686C74]">
             Loading events...
           </div>
         ) : filteredEvents.length === 0 ? (
           <div className="p-10 text-center">
-            <CalendarDays className="mx-auto h-10 w-10 text-slate-300" />
+            <CalendarDays className="mx-auto h-10 w-10 text-[#3A3E45]" />
 
-            <h3 className="mt-3 text-sm font-semibold text-slate-900">
+            <h3 className="mt-3 text-sm font-semibold text-[#F3F1EC]">
               No events found
             </h3>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Try changing your search/filter or create a new event.
+            <p className="mt-1 text-sm text-[#686C74]">
+              {isAdmin ? "Try changing your search/filter or create a new event." : "No events have been assigned to you yet."}
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1000px]">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-[#08090B] border-b border-[#292D33]">
                 <tr>
                   <th className="w-10 px-4 py-3" />
 
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#686C74]">
                     Event
                   </th>
 
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#686C74]">
                     Date
                   </th>
 
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#686C74]">
                     Time
                   </th>
 
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#686C74]">
                     Venue
                   </th>
 
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#686C74]">
                     Status
                   </th>
 
-                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-[#686C74]">
                     Sub-events
                   </th>
 
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[#686C74]">
                     Actions
                   </th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-[#292D33]">
                 {filteredEvents.map((event) => {
                   const isExpanded = expandedEvents.has(event.id);
                   const subEvents = event.subEvents ?? [];
 
                   return (
                     <Fragment key={event.id}>
-                      <tr className="hover:bg-slate-50 transition">
+                      <tr className="group hover:bg-[#171A20]/50 transition-colors">
                         <td className="px-4 py-4">
                           {subEvents.length > 0 && (
                             <button
                               type="button"
                               onClick={() => toggleExpanded(event.id)}
-                              className="rounded-md p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+                              className="rounded-md p-1 text-[#686C74] hover:bg-[#1D2026] hover:text-[#F3F1EC]"
                               aria-label={
                                 isExpanded
                                   ? "Collapse sub-events"
@@ -569,24 +574,24 @@ export default function EventManagementTable() {
                         </td>
 
                         <td className="px-4 py-4">
-                          <div className="font-semibold text-slate-900">
+                          <div className="font-semibold text-[#F3F1EC]">
                             {event.name}
                           </div>
 
-                          <div className="mt-1 text-xs text-slate-500 max-w-xs truncate">
+                          <div className="mt-1 text-xs text-[#686C74] max-w-xs truncate">
                             {event.description || "No description"}
                           </div>
                         </td>
 
-                        <td className="px-4 py-4 text-sm text-slate-700">
+                        <td className="px-4 py-4 text-sm text-[#9B9EA6]">
                           {event.date}
                         </td>
 
-                        <td className="px-4 py-4 text-sm text-slate-700">
+                        <td className="px-4 py-4 text-sm text-[#9B9EA6]">
                           {event.time}
                         </td>
 
-                        <td className="px-4 py-4 text-sm text-slate-700">
+                        <td className="px-4 py-4 text-sm text-[#9B9EA6]">
                           {event.venue}
                         </td>
 
@@ -595,74 +600,74 @@ export default function EventManagementTable() {
                         </td>
 
                         <td className="px-4 py-4 text-center">
-                          <span className="inline-flex min-w-8 justify-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                          <span className="inline-flex min-w-8 justify-center rounded-full bg-[#171A20] px-2.5 py-1 text-xs font-semibold text-[#9B9EA6]">
                             {subEvents.length}
                           </span>
                         </td>
 
                         <td className="px-4 py-4">
                           <div className="flex justify-end gap-2">
-                            <button
+                            {isAdmin && <button
                               type="button"
                               onClick={() => openCreateSubEvent(event)}
-                              className="inline-flex items-center gap-1.5 rounded-md border border-indigo-200 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-indigo-200 px-2.5 py-1.5 text-xs font-semibold text-[#7FA7FF] hover:bg-[#FF2A1A]/10"
                             >
                               <Plus className="h-3.5 w-3.5" />
                               Sub-event
-                            </button>
+                            </button>}
 
-                            <button
+                            {isAdmin && <button
                               type="button"
                               onClick={() => openEditEvent(event)}
-                              className="rounded-md border border-slate-200 p-2 text-slate-600 hover:bg-slate-100"
+                              className="rounded-md border border-[#292D33] p-2 text-[#9B9EA6] hover:bg-[#171A20]"
                               aria-label="Edit event"
                             >
                               <Edit className="h-4 w-4" />
-                            </button>
+                            </button>}
 
-                            <button
+                            {isAdmin && <button
                               type="button"
                               onClick={() => handleDeleteEvent(event)}
                               className="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50"
                               aria-label="Delete event"
                             >
                               <Trash2 className="h-4 w-4" />
-                            </button>
+                            </button>}
                           </div>
                         </td>
                       </tr>
 
                       {isExpanded && subEvents.length > 0 && (
                         <tr>
-                          <td colSpan={8} className="bg-slate-50 px-8 py-4">
-                            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                              <div className="px-4 py-3 border-b border-slate-200">
-                                <h3 className="text-sm font-bold text-slate-900">
+                          <td colSpan={8} className="bg-[#08090B] px-8 py-4">
+                            <div className="rounded-xl border border-[#292D33] bg-[#111318] overflow-hidden">
+                              <div className="px-4 py-3 border-b border-[#292D33]">
+                                <h3 className="text-sm font-bold text-[#F3F1EC]">
                                   Sub-events of {event.name}
                                 </h3>
                               </div>
 
                               <div className="overflow-x-auto">
                                 <table className="w-full min-w-[800px]">
-                                  <thead className="bg-slate-50">
+                                  <thead className="bg-[#08090B]">
                                     <tr>
-                                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
+                                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[#686C74]">
                                         Name
                                       </th>
 
-                                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
+                                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[#686C74]">
                                         Date
                                       </th>
 
-                                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
+                                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[#686C74]">
                                         Time
                                       </th>
 
-                                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
+                                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[#686C74]">
                                         Venue
                                       </th>
 
-                                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">
+                                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[#686C74]">
                                         Actions
                                       </th>
                                     </tr>
@@ -671,25 +676,25 @@ export default function EventManagementTable() {
                                   <tbody className="divide-y divide-slate-200">
                                     {subEvents.map((subEvent) => (
                                       <tr key={subEvent.id}>
-                                        <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                                        <td className="px-4 py-3 text-sm font-medium text-[#F3F1EC]">
                                           {subEvent.name}
                                         </td>
 
-                                        <td className="px-4 py-3 text-sm text-slate-600">
+                                        <td className="px-4 py-3 text-sm text-[#9B9EA6]">
                                           {subEvent.date}
                                         </td>
 
-                                        <td className="px-4 py-3 text-sm text-slate-600">
+                                        <td className="px-4 py-3 text-sm text-[#9B9EA6]">
                                           {subEvent.time}
                                         </td>
 
-                                        <td className="px-4 py-3 text-sm text-slate-600">
+                                        <td className="px-4 py-3 text-sm text-[#9B9EA6]">
                                           {subEvent.venue}
                                         </td>
 
                                         <td className="px-4 py-3">
                                           <div className="flex justify-end gap-2">
-                                            <button
+                                            {isAdmin && <button
                                               type="button"
                                               onClick={() =>
                                                 openEditSubEvent(
@@ -697,13 +702,13 @@ export default function EventManagementTable() {
                                                   subEvent.id
                                                 )
                                               }
-                                              className="rounded-md border border-slate-200 p-2 text-slate-600 hover:bg-slate-100"
+                                              className="rounded-md border border-[#292D33] p-2 text-[#9B9EA6] hover:bg-[#171A20]"
                                               aria-label="Edit sub-event"
                                             >
                                               <Edit className="h-4 w-4" />
-                                            </button>
+                                            </button>}
 
-                                            <button
+                                            {isAdmin && <button
                                               type="button"
                                               onClick={() =>
                                                 handleDeleteSubEvent(
@@ -715,7 +720,7 @@ export default function EventManagementTable() {
                                               aria-label="Delete sub-event"
                                             >
                                               <Trash2 className="h-4 w-4" />
-                                            </button>
+                                            </button>}
                                           </div>
                                         </td>
                                       </tr>
@@ -737,18 +742,18 @@ export default function EventManagementTable() {
       </section>
 
       {modalMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#08090B]/50 p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-[#111318] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#292D33] px-5 py-4">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-[#F3F1EC]">
                   {modalMode === "create-event" && "Create Event"}
                   {modalMode === "edit-event" && "Edit Event"}
                   {modalMode === "create-sub-event" && "Create Sub-event"}
                   {modalMode === "edit-sub-event" && "Edit Sub-event"}
                 </h2>
 
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-[#686C74]">
                   Enter the required event details below.
                 </p>
               </div>
@@ -756,7 +761,7 @@ export default function EventManagementTable() {
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-lg p-2 text-[#686C74] hover:bg-[#171A20] hover:text-[#F3F1EC]"
                 aria-label="Close modal"
               >
                 <X className="h-5 w-5" />
@@ -767,7 +772,7 @@ export default function EventManagementTable() {
               modalMode === "edit-event") && (
               <form onSubmit={handleEventSubmit} className="p-5 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-[#9B9EA6] mb-1">
                     Event Name *
                   </label>
 
@@ -780,14 +785,14 @@ export default function EventManagementTable() {
                         name: e.target.value,
                       })
                     }
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="w-full rounded-lg border border-[#3A3E45] px-3 py-2.5 text-sm outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30"
                     placeholder="Enter event name"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-[#9B9EA6] mb-1">
                       Date *
                     </label>
 
@@ -801,12 +806,12 @@ export default function EventManagementTable() {
                           date: e.target.value,
                         })
                       }
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full rounded-lg border border-[#3A3E45] px-3 py-2.5 text-sm outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-[#9B9EA6] mb-1">
                       Time *
                     </label>
 
@@ -820,13 +825,13 @@ export default function EventManagementTable() {
                           time: e.target.value,
                         })
                       }
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full rounded-lg border border-[#3A3E45] px-3 py-2.5 text-sm outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-[#9B9EA6] mb-1">
                     Venue *
                   </label>
 
@@ -839,13 +844,13 @@ export default function EventManagementTable() {
                         venue: e.target.value,
                       })
                     }
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="w-full rounded-lg border border-[#3A3E45] px-3 py-2.5 text-sm outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30"
                     placeholder="Enter venue"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-[#9B9EA6] mb-1">
                     Description
                   </label>
 
@@ -858,14 +863,14 @@ export default function EventManagementTable() {
                         description: e.target.value,
                       })
                     }
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 resize-none"
+                    className="w-full rounded-lg border border-[#3A3E45] px-3 py-2.5 text-sm outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30 resize-none"
                     placeholder="Describe the event"
                   />
                 </div>
 
                 {modalMode === "edit-event" && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-[#9B9EA6] mb-1">
                       Status
                     </label>
 
@@ -885,7 +890,7 @@ export default function EventManagementTable() {
                           e.target.value as EventStatus
                         );
                       }}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full rounded-lg border border-[#3A3E45] px-3 py-2.5 text-sm outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30"
                     >
                       <option value="upcoming">Upcoming</option>
                       <option value="active">Active</option>
@@ -904,14 +909,14 @@ export default function EventManagementTable() {
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="rounded-lg border border-[#3A3E45] px-4 py-2.5 text-sm font-medium text-[#9B9EA6] hover:bg-[#08090B]"
                   >
                     Cancel
                   </button>
 
                   <button
                     type="submit"
-                    className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                    className="rounded-lg bg-[#FF2A1A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#C51D16]"
                   >
                     {modalMode === "create-event"
                       ? "Create Event"
@@ -928,7 +933,7 @@ export default function EventManagementTable() {
                 className="p-5 space-y-4"
               >
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-[#9B9EA6] mb-1">
                     Sub-event Name *
                   </label>
 
@@ -941,14 +946,14 @@ export default function EventManagementTable() {
                         name: e.target.value,
                       })
                     }
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="w-full rounded-lg border border-[#3A3E45] px-3 py-2.5 text-sm outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30"
                     placeholder="Enter sub-event name"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-[#9B9EA6] mb-1">
                       Date *
                     </label>
 
@@ -962,12 +967,12 @@ export default function EventManagementTable() {
                           date: e.target.value,
                         })
                       }
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full rounded-lg border border-[#3A3E45] px-3 py-2.5 text-sm outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-[#9B9EA6] mb-1">
                       Time *
                     </label>
 
@@ -981,13 +986,13 @@ export default function EventManagementTable() {
                           time: e.target.value,
                         })
                       }
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full rounded-lg border border-[#3A3E45] px-3 py-2.5 text-sm outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-[#9B9EA6] mb-1">
                     Venue *
                   </label>
 
@@ -1000,13 +1005,13 @@ export default function EventManagementTable() {
                         venue: e.target.value,
                       })
                     }
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="w-full rounded-lg border border-[#3A3E45] px-3 py-2.5 text-sm outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30"
                     placeholder="Enter venue"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-[#9B9EA6] mb-1">
                     Description
                   </label>
 
@@ -1019,7 +1024,7 @@ export default function EventManagementTable() {
                         description: e.target.value,
                       })
                     }
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 resize-none"
+                    className="w-full rounded-lg border border-[#3A3E45] px-3 py-2.5 text-sm outline-none focus:border-[#FF2A1A]/50 focus:ring-2 focus:ring-[#FF2A1A]/30 resize-none"
                     placeholder="Describe the sub-event"
                   />
                 </div>
@@ -1034,14 +1039,14 @@ export default function EventManagementTable() {
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="rounded-lg border border-[#3A3E45] px-4 py-2.5 text-sm font-medium text-[#9B9EA6] hover:bg-[#08090B]"
                   >
                     Cancel
                   </button>
 
                   <button
                     type="submit"
-                    className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                    className="rounded-lg bg-[#FF2A1A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#C51D16]"
                   >
                     {modalMode === "create-sub-event"
                       ? "Create Sub-event"

@@ -46,7 +46,7 @@ export async function resolveAuthState(source: AuthSource): Promise<AuthState> {
   }
 }
 
-/** Shared hook subscription with cancellation; no resource data or role in browser storage. */
+/** Shared hook subscription with cancellation; Supabase persists the refresh session, never profile or role data. */
 export function createAuthStore(sourceFactory: () => AuthSource) {
   let state = INITIAL_AUTH_STATE;
   const listeners = new Set<() => void>();

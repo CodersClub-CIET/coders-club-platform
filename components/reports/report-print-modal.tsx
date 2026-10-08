@@ -44,18 +44,18 @@ export default function ReportPrintModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-white print:static">
-      <div className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] print:max-h-none print:shadow-none print:border-none print:rounded-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#08090B]/80 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-[#111318] print:static">
+      <div className="relative w-full max-w-5xl bg-[#111318] rounded-2xl shadow-2xl border border-[#292D33] overflow-hidden flex flex-col max-h-[92vh] print:max-h-none print:shadow-none print:border-none print:rounded-none">
         
         {/* Top Modal Controls (Hidden in Print) */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0 print:hidden">
+        <div className="px-6 py-4 bg-[#08090B] text-white flex items-center justify-between shrink-0 print:hidden">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-indigo-600/30 text-indigo-400 border border-indigo-500/30">
+            <div className="p-2 rounded-xl bg-[#FF2A1A]/30 text-indigo-400 border border-indigo-500/30">
               <FileText className="size-5" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-white">{options.title}</h2>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-[#686C74]">
                 {options.subtitle || "Institutional Print & PDF Export Document"}
               </p>
             </div>
@@ -68,7 +68,7 @@ export default function ReportPrintModal({
                 variant="outline"
                 size="sm"
                 onClick={onExportCSV}
-                className="text-xs bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 gap-1.5"
+                className="text-xs bg-[#1D2026] border-slate-700 text-slate-200 hover:bg-slate-700 gap-1.5"
               >
                 <Download className="size-3.5" />
                 <span>Export CSV</span>
@@ -79,7 +79,7 @@ export default function ReportPrintModal({
               type="button"
               size="sm"
               onClick={handlePrint}
-              className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white gap-1.5 font-bold shadow-md shadow-indigo-600/30"
+              className="text-xs bg-[#FF2A1A] hover:bg-[#FF2A1A] text-white gap-1.5 font-bold shadow-md shadow-indigo-600/30"
             >
               <Printer className="size-3.5" />
               <span>Print / Save PDF</span>
@@ -89,7 +89,7 @@ export default function ReportPrintModal({
               type="button"
               onClick={onClose}
               aria-label="Close modal"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ml-2"
+              className="p-1.5 rounded-lg text-[#686C74] hover:text-white hover:bg-[#1D2026] transition-colors ml-2"
             >
               <X className="size-5" />
             </button>
@@ -97,23 +97,23 @@ export default function ReportPrintModal({
         </div>
 
         {/* Printable Document Body */}
-        <div className="p-8 sm:p-12 overflow-y-auto flex-1 font-serif text-slate-900 bg-white print:p-0 print:overflow-visible">
+        <div className="p-8 sm:p-12 overflow-y-auto flex-1 font-serif text-[#F3F1EC] bg-[#111318] print:p-0 print:overflow-visible">
           
           {/* CIET Institutional Letterhead Header */}
           {options.includeLetterhead !== false && (
             <div className="text-center pb-6 border-b-2 border-slate-800 mb-6">
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight uppercase text-slate-900 font-sans">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight uppercase text-[#F3F1EC] font-sans">
                 {options.institutionName || "Coimbatore Institute of Engineering and Technology"}
               </h1>
-              <p className="text-xs text-slate-600 font-sans mt-0.5 uppercase tracking-wider">
+              <p className="text-xs text-[#9B9EA6] font-sans mt-0.5 uppercase tracking-wider">
                 {options.autonomousAffiliation ||
                   "(Autonomous Institution | Approved by AICTE, New Delhi & Affiliated to Anna University, Chennai)"}
               </p>
-              <p className="text-xs text-slate-500 font-sans mt-0.5">
+              <p className="text-xs text-[#686C74] font-sans mt-0.5">
                 {options.institutionAddress ||
                   "Narasipuram (P.O), Thondamuthur (Via), Vellimalaipattinam, Coimbatore - 641109, Tamil Nadu • Ph: +91 422-2970703"}
               </p>
-              <div className="inline-block mt-3 px-4 py-1 rounded bg-slate-100 border border-slate-300">
+              <div className="inline-block mt-3 px-4 py-1 rounded bg-[#171A20] border border-[#3A3E45]">
                 <span className="text-xs sm:text-sm font-bold uppercase tracking-widest font-sans text-indigo-900">
                   Department of Technical Clubs — Coders Club CIET
                 </span>
@@ -122,7 +122,7 @@ export default function ReportPrintModal({
                 {options.title}
               </h2>
               {options.generatedAt && (
-                <p className="text-[11px] text-slate-500 font-sans mt-1">
+                <p className="text-[11px] text-[#686C74] font-sans mt-1">
                   Report Date: {options.generatedAt}
                 </p>
               )}
@@ -130,11 +130,11 @@ export default function ReportPrintModal({
           )}
 
           {/* Dynamic Content Provided by the Calling View */}
-          <div className="font-sans text-xs text-slate-800">{children}</div>
+          <div className="font-sans text-xs text-[#F3F1EC]">{children}</div>
 
           {/* Institutional 3-Signatories Footer */}
           {options.includeSignatures !== false && options.signatories && options.signatories.length > 0 && (
-            <div className="pt-12 mt-12 border-t border-slate-300 font-sans grid grid-cols-3 text-center text-xs text-slate-800 print:break-inside-avoid">
+            <div className="pt-12 mt-12 border-t border-[#3A3E45] font-sans grid grid-cols-3 text-center text-xs text-[#F3F1EC] print:break-inside-avoid">
               {options.signatories.map((sig, idx) => (
                 <div key={idx}>
                   <div className="h-10"></div>
@@ -142,10 +142,10 @@ export default function ReportPrintModal({
                     {sig.label}
                   </div>
                   {sig.title && (
-                    <p className="text-[10px] text-slate-500">{sig.title}</p>
+                    <p className="text-[10px] text-[#686C74]">{sig.title}</p>
                   )}
                   {sig.department && (
-                    <p className="text-[10px] text-slate-500">{sig.department}</p>
+                    <p className="text-[10px] text-[#686C74]">{sig.department}</p>
                   )}
                 </div>
               ))}
