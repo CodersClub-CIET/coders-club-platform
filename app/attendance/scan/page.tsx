@@ -333,16 +333,16 @@ function ScanContent() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4">
       {/* Container Box */}
-      <div className="w-full max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
+      <div className="w-full max-w-md bg-[#08090B]/95 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
         {/* Brand Banner */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+            <div className="p-2 rounded-xl bg-[#FF2A1A]/20 text-indigo-400 border border-indigo-500/30">
               <QrCode className="size-5" />
             </div>
             <div>
               <h1 className="text-sm font-bold tracking-tight text-white">CIET Coders Club</h1>
-              <p className="text-[11px] text-slate-400">Attendance Verification Portal</p>
+              <p className="text-[11px] text-[#686C74]">Attendance Verification Portal</p>
             </div>
           </div>
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -355,7 +355,7 @@ function ScanContent() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <div className="size-10 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin" />
-            <p className="text-xs text-slate-400 font-medium">Connecting to attendance session...</p>
+            <p className="text-xs text-[#686C74] font-medium">Connecting to attendance session...</p>
           </div>
         ) : noActiveSessions ? (
           /* No Active Sessions State */
@@ -364,21 +364,21 @@ function ScanContent() {
               <Clock className="size-8" />
             </div>
             <h2 className="text-base font-bold text-white mb-1.5">No Active Attendance Session</h2>
-            <p className="text-xs text-slate-400 max-w-xs mb-6 leading-relaxed">
+            <p className="text-xs text-[#686C74] max-w-xs mb-6 leading-relaxed">
               There are currently no attendance sessions open for check-in. Please wait for an event coordinator or club lead to launch a session.
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full max-w-xs">
               <Button
                 type="button"
                 onClick={initVerification}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 px-4 rounded-xl gap-2 shadow-md transition-all"
+                className="w-full bg-[#FF2A1A] hover:bg-[#FF2A1A] text-white text-xs font-semibold py-2 px-4 rounded-xl gap-2 shadow-md transition-all"
               >
                 <RefreshCw className="size-3.5" />
                 Check Again
               </Button>
               <Link
                 href="/attendance"
-                className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700/80 px-4 py-2 rounded-xl border border-slate-700 transition-colors"
+                className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-[#686C74] hover:text-white bg-[#1D2026] hover:bg-slate-700/80 px-4 py-2 rounded-xl border border-slate-700 transition-colors"
               >
                 <ArrowLeft className="size-3.5" />
                 Attendance Suite
@@ -400,42 +400,42 @@ function ScanContent() {
 
             <div className="w-full bg-slate-950/70 rounded-2xl p-4 border border-slate-800 text-left space-y-2 mb-5">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Student:</span>
+                <span className="text-[#686C74]">Student:</span>
                 <span className="font-semibold text-white">{deviceSubmission.studentName}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Reg Number:</span>
+                <span className="text-[#686C74]">Reg Number:</span>
                 <span className="font-mono font-semibold text-indigo-300">
                   {deviceSubmission.studentRegNo}
                 </span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Department:</span>
+                <span className="text-[#686C74]">Department:</span>
                 <span className="font-medium text-slate-200">{deviceSubmission.department}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Class & Sec:</span>
+                <span className="text-[#686C74]">Class & Sec:</span>
                 <span className="font-medium text-slate-200">
                   {deviceSubmission.year} ({deviceSubmission.section})
                 </span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Event:</span>
+                <span className="text-[#686C74]">Event:</span>
                 <span className="font-medium text-slate-200">{handshake?.eventName}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Period:</span>
+                <span className="text-[#686C74]">Period:</span>
                 <span className="capitalize font-medium text-amber-400">{handshake?.period}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Submitted At:</span>
-                <span className="font-mono text-slate-400">
+                <span className="text-[#686C74]">Submitted At:</span>
+                <span className="font-mono text-[#686C74]">
                   {new Date(deviceSubmission.markedAt).toLocaleTimeString()}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+            <div className="flex items-center gap-1.5 text-[11px] text-[#686C74]">
               <Sparkles className="size-3.5 text-indigo-400 shrink-0" />
               <span>Response locked to this device. You may close this tab.</span>
             </div>
@@ -452,14 +452,14 @@ function ScanContent() {
               <Button
                 type="button"
                 onClick={initVerification}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 rounded-xl gap-2"
+                className="w-full bg-[#FF2A1A] hover:bg-[#FF2A1A] text-white text-xs font-semibold py-2 rounded-xl gap-2"
               >
                 <RefreshCw className="size-3.5" />
                 Retry Connection
               </Button>
               <Link
                 href="/attendance"
-                className="inline-flex items-center justify-center gap-1 text-xs text-slate-400 hover:text-white py-2"
+                className="inline-flex items-center justify-center gap-1 text-xs text-[#686C74] hover:text-white py-2"
               >
                 <ArrowLeft className="size-3.5" />
                 Back to Attendance Dashboard
@@ -481,50 +481,50 @@ function ScanContent() {
 
             <div className="w-full bg-slate-950/70 rounded-2xl p-4 border border-slate-800 text-left space-y-2 mb-5">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Student:</span>
+                <span className="text-[#686C74]">Student:</span>
                 <span className="font-semibold text-white">{successRecord.name}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Reg Number:</span>
+                <span className="text-[#686C74]">Reg Number:</span>
                 <span className="font-mono font-semibold text-indigo-300">
                   {successRecord.identifier}
                 </span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Class & Sec:</span>
+                <span className="text-[#686C74]">Class & Sec:</span>
                 <span className="font-medium text-slate-200">{successRecord.roleOrClass}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Department:</span>
+                <span className="text-[#686C74]">Department:</span>
                 <span className="font-medium text-slate-200">{successRecord.department}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Event:</span>
+                <span className="text-[#686C74]">Event:</span>
                 <span className="font-medium text-slate-200">{handshake?.eventName}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Period:</span>
+                <span className="text-[#686C74]">Period:</span>
                 <span className="capitalize font-medium text-amber-400">{handshake?.period}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Time Marked:</span>
-                <span className="font-mono text-slate-400">
+                <span className="text-[#686C74]">Time Marked:</span>
+                <span className="font-mono text-[#686C74]">
                   {new Date(successRecord.markedAt).toLocaleTimeString()}
                 </span>
               </div>
             </div>
 
-            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-left w-full mb-4">
+            <div className="p-3 bg-[#FF2A1A]/10 border border-indigo-500/20 rounded-xl text-left w-full mb-4">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-300 mb-1">
                 <Lock className="size-3.5" />
                 <span>Single-Device Restriction</span>
               </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
+              <p className="text-[11px] text-[#686C74] leading-relaxed">
                 Attendance has been locked to this device for this session. Multiple responses from the same phone are prohibited.
               </p>
             </div>
 
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+            <div className="flex items-center gap-1.5 text-[11px] text-[#686C74]">
               <Sparkles className="size-3.5 text-indigo-400" />
               <span>You may now close this browser tab.</span>
             </div>
@@ -550,8 +550,8 @@ function ScanContent() {
 
               {/* Handshake TTL Timer (5-minute fixed window) */}
               <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-[11px]">
-                <span className="text-slate-400 flex items-center gap-1">
-                  <Clock className="size-3 text-slate-400" />
+                <span className="text-[#686C74] flex items-center gap-1">
+                  <Clock className="size-3 text-[#686C74]" />
                   Security Window:
                 </span>
                 <div className="flex items-center gap-2">
@@ -579,14 +579,14 @@ function ScanContent() {
             {/* Active Session Selector (if multiple active sessions exist) */}
             {activeSessions.length > 1 && (
               <div className="mb-4 bg-slate-950/40 p-2.5 rounded-xl border border-slate-800">
-                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 mb-1.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#686C74] mb-1.5">
                   <Layers className="size-3 text-indigo-400" />
                   <span>Select Active Event:</span>
                 </div>
                 <select
                   value={selectedSessionId}
                   onChange={(e) => handleSessionChange(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[#08090B] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
                 >
                   {activeSessions.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -621,7 +621,7 @@ function ScanContent() {
                   }
                   className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white font-mono placeholder-slate-500 focus:outline-none focus:border-indigo-500 uppercase"
                 />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                <span className="text-[10px] text-[#686C74] mt-0.5 block">
                   Limited to one submission per student and device
                 </span>
               </div>
@@ -695,7 +695,7 @@ function ScanContent() {
               <Button
                 type="submit"
                 disabled={submitting || timeLeft <= 0}
-                className="w-full mt-2 py-2.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg transition-all disabled:opacity-50"
+                className="w-full mt-2 py-2.5 text-xs font-bold bg-[#FF2A1A] hover:bg-[#FF2A1A] text-white rounded-xl shadow-lg transition-all disabled:opacity-50"
               >
                 {submitting ? "Verifying & Recording..." : "Confirm Student Attendance"}
               </Button>
@@ -704,12 +704,12 @@ function ScanContent() {
         )}
 
         {/* Footer Info inside the card box */}
-        <div className="mt-6 pt-4 border-t border-slate-800 text-center text-[11px] text-slate-400 flex flex-col items-center gap-0.5">
+        <div className="mt-6 pt-4 border-t border-slate-800 text-center text-[11px] text-[#686C74] flex flex-col items-center gap-0.5">
           <div className="flex items-center gap-1.5 text-slate-300 font-medium">
             <GraduationCap className="size-3.5 text-indigo-400" />
             <span>Coimbatore Institute of Engineering and Technology</span>
           </div>
-          <span className="text-[10px] text-slate-400">
+          <span className="text-[10px] text-[#686C74]">
             Narasipuram (P.O), Thondamuthur (Via), Vellimalaipattinam, Coimbatore - 641109
           </span>
           <span className="text-[10px] text-indigo-400/80 font-mono">Ph: +91 422-2970703</span>
@@ -723,7 +723,7 @@ export default function StudentScanPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center text-xs text-slate-400">
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center text-xs text-[#686C74]">
           Loading attendance verification...
         </div>
       }

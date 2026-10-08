@@ -94,22 +94,22 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+      <div className="relative w-full max-w-lg rounded-2xl bg-[#111318] shadow-2xl border border-[#292D33] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/50">
+        <div className="flex items-center justify-between border-b border-[#292D33] px-6 py-4 bg-[#08090B]/50">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+            <div className="p-2 rounded-lg bg-[#FF2A1A]/10 text-[#FF2A1A]">
               <QrCode className="size-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Attendance QR Code</h2>
-              <p className="text-xs text-slate-500 font-mono">Session ID: {session.id}</p>
+              <h2 className="text-base font-bold text-[#F3F1EC]">Attendance QR Code</h2>
+              <p className="text-xs text-[#686C74] font-mono">Session ID: {session.id}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-[#686C74] hover:text-[#9B9EA6] hover:bg-[#171A20] transition-colors"
           >
             <X className="size-5" />
           </button>
@@ -119,7 +119,7 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
         <div className="p-6 flex flex-col items-center text-center">
           {/* Session Badges */}
           <div className="flex flex-wrap items-center justify-center gap-2 mb-3">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#FF2A1A]/20 text-indigo-800">
               {session.eventName}
             </span>
             <span
@@ -132,23 +132,23 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
               {session.period} Period
             </span>
             {session.subEventName && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#171A20] text-[#9B9EA6]">
                 {session.subEventName}
               </span>
             )}
           </div>
 
-          <h3 className="text-lg font-bold text-slate-900 mb-1">{session.sessionName}</h3>
-          <p className="text-xs text-slate-500 max-w-sm mb-4">
+          <h3 className="text-lg font-bold text-[#F3F1EC] mb-1">{session.sessionName}</h3>
+          <p className="text-xs text-[#686C74] max-w-sm mb-4">
             Scan using default mobile camera or Google Lens. Valid for 5 minutes. Restricted to 1 response per phone.
           </p>
 
           {/* QR Display Card */}
-          <div className="relative p-4 bg-white rounded-2xl border-2 border-dashed border-indigo-200 shadow-inner flex items-center justify-center min-h-[340px] min-w-[340px]">
+          <div className="relative p-4 bg-[#111318] rounded-2xl border-2 border-dashed border-indigo-200 shadow-inner flex items-center justify-center min-h-[340px] min-w-[340px]">
             {loading ? (
               <div className="flex flex-col items-center gap-3">
                 <div className="size-10 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin" />
-                <p className="text-xs text-slate-500 font-medium">Generating secure 5-minute QR token...</p>
+                <p className="text-xs text-[#686C74] font-medium">Generating secure 5-minute QR token...</p>
               </div>
             ) : error ? (
               <div className="text-center p-4">
@@ -162,14 +162,14 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
                 <div className="p-3 rounded-full bg-amber-50 text-amber-600 border border-amber-200 mb-3">
                   <AlertTriangle className="size-8" />
                 </div>
-                <h4 className="text-base font-bold text-slate-800">QR Code Expired</h4>
-                <p className="text-xs text-slate-500 max-w-xs mt-1 mb-4">
+                <h4 className="text-base font-bold text-[#F3F1EC]">QR Code Expired</h4>
+                <p className="text-xs text-[#686C74] max-w-xs mt-1 mb-4">
                   The 5-minute validity window has expired. Generate a fresh QR code to allow students to continue scanning.
                 </p>
                 <Button
                   type="button"
                   onClick={loadQR}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold gap-1.5"
+                  className="bg-[#FF2A1A] hover:bg-[#C51D16] text-white text-xs font-semibold gap-1.5"
                 >
                   <RotateCcw className="size-3.5" />
                   Generate Fresh 5-Min QR
@@ -191,7 +191,7 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
                   <button
                     type="button"
                     onClick={loadQR}
-                    className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
+                    className="p-1 rounded-md text-[#686C74] hover:text-[#FF2A1A] hover:bg-[#171A20] transition-colors"
                     title="Refresh QR token"
                   >
                     <RotateCcw className="size-3.5" />
@@ -202,10 +202,10 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
           </div>
 
           {/* Security & 5-Minute Countdown Info */}
-          <div className="w-full mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 text-left">
+          <div className="w-full mt-4 p-3 bg-[#08090B] rounded-xl border border-[#292D33] text-left">
             <div className="flex items-center justify-between text-xs mb-2">
-              <span className="flex items-center gap-1.5 font-medium text-slate-700">
-                <Clock className="size-3.5 text-indigo-600" />
+              <span className="flex items-center gap-1.5 font-medium text-[#9B9EA6]">
+                <Clock className="size-3.5 text-[#FF2A1A]" />
                 QR Validity:
                 <span
                   className={`font-mono font-bold ${
@@ -213,13 +213,13 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
                       ? "text-rose-600"
                       : secondsRemaining <= 60
                       ? "text-rose-500 animate-pulse"
-                      : "text-indigo-600"
+                      : "text-[#FF2A1A]"
                   }`}
                 >
                   {isExpired ? "EXPIRED" : `${formatTime(secondsRemaining)} remaining`}
                 </span>
               </span>
-              <span className="text-slate-400 font-mono text-[10px]">Anti-Proxy Single Submission</span>
+              <span className="text-[#686C74] font-mono text-[10px]">Anti-Proxy Single Submission</span>
             </div>
 
             {/* Link Copy Box */}
@@ -228,7 +228,7 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
                 type="text"
                 readOnly
                 value={qrData?.scanUrl || ""}
-                className="w-full text-[11px] font-mono bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-600 truncate focus:outline-none"
+                className="w-full text-[11px] font-mono bg-[#111318] border border-[#292D33] rounded-lg px-2.5 py-1.5 text-[#9B9EA6] truncate focus:outline-none"
               />
               <Button
                 type="button"
@@ -246,7 +246,7 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
                   href={qrData.scanUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
+                  className="p-2 rounded-lg text-[#686C74] hover:text-[#FF2A1A] hover:bg-[#171A20] transition-colors"
                   title="Open Scan URL in new tab"
                 >
                   <ExternalLink className="size-4" />
@@ -257,13 +257,13 @@ export default function QRDisplayModal({ session, onClose }: QRDisplayModalProps
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-3 bg-slate-50 border-t border-slate-100">
+        <div className="flex items-center justify-between px-6 py-3 bg-[#08090B] border-t border-[#292D33]">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={loadQR}
-            className="text-xs text-slate-600 gap-1.5"
+            className="text-xs text-[#9B9EA6] gap-1.5"
           >
             <RotateCcw className="size-3.5" />
             Refresh QR Token

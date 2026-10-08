@@ -1,11 +1,15 @@
+import { createClient } from "@/lib/supabase/client";
 import {
   AllocationFilter,
-  AllocationStatus,
   AssociateAllocation,
+  AssociateAllocationInsert,
+  AssociateAllocationRow,
+  AssociateAllocationUpdate,
   AssociateReference,
   CreateAllocationInput,
   EventReference,
   UpdateAllocationInput,
+  mapRowToAllocation,
 } from "./types";
 import {
   validateCompleteAllocation,
@@ -14,160 +18,126 @@ import {
 } from "./validation";
 
 /**
- * ============================================================================
- * BACKEND INTEGRATION CONTRACT NOTICE
- * ============================================================================
- * The Django REST Framework endpoints for Associate Allocation are not yet
- * deployed in this repository.
+ * Associate Allocation Service
  *
- * PROPOSED DJANGO API CONTRACT (TO BE CONFIRMED WITH BACKEND TEAM):
- * - GET    /api/allocations/               -> List allocations (supports query filters)
- * - GET    /api/allocations/<id>/          -> Retrieve single allocation
- * - POST   /api/allocations/               -> Create new allocation
- * - PATCH  /api/allocations/<id>/          -> Update allocation (attendanceAccess/status)
- * - DELETE /api/allocations/<id>/          -> Remove allocation
+ * Provides real Supabase PostgreSQL CRUD operations for the `associate_allocations` table.
  *
- * When backend endpoints are live, use Foundation's `apiClient` from:
- *   import { apiClient } from "@/lib/api/client";
+ * Database schema:
+ * - id: uuid primary key
+ * - associate_id: uuid NOT NULL (references associates.id)
+ * - event_node_id: uuid NOT NULL (references event_nodes.id)
+ * - attendance_access: boolean NOT NULL DEFAULT false
+ * - is_active: boolean NOT NULL DEFAULT true
+ * - assigned_by: uuid NULL (references user_profiles.id)
+ * - assigned_at: timestamptz NOT NULL DEFAULT now()
  *
- * Current implementation uses a safe local state adapter with persistent storage
- * fallback so the frontend and other modules can integrate and test immediately
- * without inventing unauthorized backend URLs.
- * ============================================================================
+ * Unique constraint: associate_event_allocation_unique (associate_id, event_node_id)
  */
-
-const STORAGE_ALLOCATIONS_KEY = "coders_club_associate_allocations";
-
-// Initial seed records for testing and standalone preview
-const SEED_ALLOCATIONS: AssociateAllocation[] = [
-  {
-    id: "alloc-01",
-    associateId: "assoc-101",
-    associateName: "Kavya Murugan",
-    associateEmail: "kavya.m@codersclub.edu",
-    associateDepartment: "CSE",
-    eventId: "evt-01",
-    eventName: "Full Stack Web Development Hackathon",
-    subEventId: "sub-01",
-    subEventName: "Round 1: Rapid Prototyping",
-    attendanceAccess: true, // Access ON
-    status: "active",
-    allocatedBy: "usr-admin-01",
-    allocatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: "alloc-02",
-    associateId: "assoc-102",
-    associateName: "Dinesh Raj",
-    associateEmail: "dinesh.r@codersclub.edu",
-    associateDepartment: "IT",
-    eventId: "evt-02",
-    eventName: "Algorithmic Problem Solving Workshop",
-    attendanceAccess: false, // Access OFF
-    status: "scheduled",
-    allocatedBy: "usr-admin-01",
-    allocatedAt: new Date(Date.now() - 86400000).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: "alloc-03",
-    associateId: "assoc-103",
-    associateName: "Priya Sundaram",
-    associateEmail: "priya.s@codersclub.edu",
-    associateDepartment: "AI&DS",
-    eventId: "evt-01",
-    eventName: "Full Stack Web Development Hackathon",
-    subEventId: "sub-02",
-    subEventName: "Round 2: API Integration & Defense",
-    attendanceAccess: true, // Access ON
-    status: "active",
-    allocatedBy: "usr-admin-01",
-    allocatedAt: new Date(Date.now() - 43200000).toISOString(),
-    updatedAt: new Date(Date.now() - 43200000).toISOString(),
-  },
-];
-
 class AssociateAllocationService {
-  private inMemoryAllocations: AssociateAllocation[] = [...SEED_ALLOCATIONS];
-
   /**
-   * Helper to retrieve stored allocations safely across client/server boundaries.
+   * Helper to resolve the authenticated user ID from the active Supabase session.
    */
-  private getStoredAllocations(): AssociateAllocation[] {
-    if (typeof window === "undefined") {
-      return [...this.inMemoryAllocations];
-    }
-
+  private async getAuthenticatedUserId(): Promise<string | null> {
     try {
-      const raw = localStorage.getItem(STORAGE_ALLOCATIONS_KEY);
-      if (!raw) {
-        localStorage.setItem(
-          STORAGE_ALLOCATIONS_KEY,
-          JSON.stringify(SEED_ALLOCATIONS)
-        );
-        return [...SEED_ALLOCATIONS];
+      const supabase = createClient();
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+
+      if (error || !session?.user?.id) {
+        return null;
       }
-      return JSON.parse(raw);
+
+      return session.user.id;
     } catch {
-      return [...this.inMemoryAllocations];
+      return null;
     }
   }
 
   /**
-   * Helper to persist allocations safely.
-   */
-  private saveAllocations(records: AssociateAllocation[]): void {
-    this.inMemoryAllocations = records;
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(
-          STORAGE_ALLOCATIONS_KEY,
-          JSON.stringify(records)
-        );
-      } catch {
-        // Fallback to in-memory state
-      }
-    }
-  }
-
-  /**
-   * List allocations with optional filtering by event, associate, status, or search query.
+   * List allocations from Supabase with optional filters.
    *
-   * @param filter - Optional filters
+   * @param filter - Optional filters for event, associate, status, or search query
    * @returns Array of AssociateAllocation records
    */
   async getAllocations(
     filter?: AllocationFilter
   ): Promise<AssociateAllocation[]> {
-    // TODO: [Backend Contract] When Django endpoint is ready:
-    // return apiClient<AssociateAllocation[]>("/allocations/", { ... });
+    const supabase = createClient();
 
-    let records = this.getStoredAllocations();
+    let query = supabase
+      .from("associate_allocations")
+      .select("*")
+      .order("assigned_at", { ascending: false });
 
-    if (!filter) return records;
-
-    if (filter.eventId) {
-      records = records.filter((r) => r.eventId === filter.eventId);
+    const targetNodeId = filter?.eventNodeId || filter?.eventId;
+    if (targetNodeId) {
+      query = query.eq("event_node_id", targetNodeId);
     }
 
-    if (filter.associateId) {
-      records = records.filter((r) => r.associateId === filter.associateId);
+    if (filter?.associateId) {
+      query = query.eq("associate_id", filter.associateId);
     }
 
-    if (filter.status) {
-      records = records.filter((r) => r.status === filter.status);
+    if (filter?.isActive !== undefined) {
+      query = query.eq("is_active", filter.isActive);
+    } else if (filter?.status) {
+      if (filter.status === "active") {
+        query = query.eq("is_active", true);
+      } else if (
+        filter.status === "suspended" ||
+        filter.status === "completed"
+      ) {
+        query = query.eq("is_active", false);
+      }
     }
 
-    if (filter.search && filter.search.trim() !== "") {
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(
+        `Failed to fetch allocations from Supabase: ${error.message}`
+      );
+    }
+
+    const rows = (data as AssociateAllocationRow[]) || [];
+    if (rows.length === 0) return [];
+
+    // Batch resolve associate names and event names
+    const associateIds = [...new Set(rows.map((r) => r.associate_id))];
+    const nodeIds = [...new Set(rows.map((r) => r.event_node_id))];
+
+    const [{ data: associatesList }, { data: nodesList }] = await Promise.all([
+      supabase.from("associates").select("id, name, email").in("id", associateIds),
+      supabase.from("event_nodes").select("id, name, parent_id").in("id", nodeIds),
+    ]);
+
+    const associateMap = new Map((associatesList || []).map((a) => [a.id, a]));
+    const nodeMap = new Map((nodesList || []).map((n) => [n.id, n]));
+
+    let records: AssociateAllocation[] = rows.map((row) => {
+      const a = associateMap.get(row.associate_id);
+      const n = nodeMap.get(row.event_node_id);
+      return mapRowToAllocation(row, {
+        associateName: a?.name,
+        associateEmail: a?.email,
+        eventName: n?.name,
+      });
+    });
+
+    if (filter?.search && filter.search.trim() !== "") {
       const q = filter.search.toLowerCase().trim();
       records = records.filter(
         (r) =>
-          r.associateName.toLowerCase().includes(q) ||
-          r.associateEmail.toLowerCase().includes(q) ||
-          r.eventName.toLowerCase().includes(q) ||
-          (r.subEventName && r.subEventName.toLowerCase().includes(q)) ||
-          r.associateDepartment.toLowerCase().includes(q)
+          r.associateId.toLowerCase().includes(q) ||
+          r.eventId.toLowerCase().includes(q) ||
+          (r.eventNodeId && r.eventNodeId.toLowerCase().includes(q)) ||
+          (r.subEventId && r.subEventId.toLowerCase().includes(q)) ||
+          (r.associateName && r.associateName.toLowerCase().includes(q)) ||
+          (r.eventName && r.eventName.toLowerCase().includes(q)) ||
+          (r.associateDepartment &&
+            r.associateDepartment.toLowerCase().includes(q))
       );
     }
 
@@ -175,24 +145,38 @@ class AssociateAllocationService {
   }
 
   /**
-   * Retrieve a single allocation by ID.
+   * Retrieve a single allocation by ID from Supabase.
    *
-   * @param id - Unique allocation ID
+   * @param id - Unique allocation UUID
    * @returns The matching AssociateAllocation or null
    */
   async getAllocationById(
     id: string
   ): Promise<AssociateAllocation | null> {
-    // TODO: [Backend Contract] When Django endpoint is ready:
-    // return apiClient<AssociateAllocation>(`/allocations/${id}/`);
+    const supabase = createClient();
 
-    const records = this.getStoredAllocations();
-    return records.find((r) => r.id === id) || null;
+    const { data, error } = await supabase
+      .from("associate_allocations")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(
+        `Failed to fetch allocation '${id}' from Supabase: ${error.message}`
+      );
+    }
+
+    if (!data) return null;
+
+    return mapRowToAllocation(data as AssociateAllocationRow);
   }
 
   /**
-   * Create a new Associate Allocation.
-   * Runs complete validation (input + associate eligibility + event eligibility).
+   * Create a new Associate Allocation in Supabase.
+   *
+   * Validates associate eligibility and event status, captures authenticated user ID,
+   * maps fields to snake_case database columns, and enforces unique constraint.
    *
    * @param input - CreateAllocationInput
    * @param associate - Associate reference for eligibility check
@@ -204,172 +188,196 @@ class AssociateAllocationService {
     associate?: AssociateReference,
     event?: EventReference
   ): Promise<AssociateAllocation> {
-    // 1. Validation check
-    const validation = associate && event
-      ? validateCompleteAllocation(input, associate, event)
-      : validateCreateAllocationInput(input);
+    // 1. Domain validation
+    const validation =
+      associate && event
+        ? validateCompleteAllocation(input, associate, event)
+        : validateCreateAllocationInput(input);
 
     if (!validation.isValid) {
       throw new Error(validation.errors.join(" "));
     }
 
-    // TODO: [Backend Contract] When Django endpoint is ready:
-    // return apiClient<AssociateAllocation>("/allocations/", {
-    //   method: "POST",
-    //   body: JSON.stringify(input),
-    // });
+    const supabase = createClient();
 
-    const records = this.getStoredAllocations();
+    // Map fields: eventId/eventNodeId -> event_node_id
+    const targetEventNodeId =
+      input.eventNodeId || input.subEventId || input.eventId;
+    if (!targetEventNodeId) {
+      throw new Error("Event ID or Event Node ID is required.");
+    }
 
-    // Check for duplicate allocation (same associate on exact same event or sub-event)
-    const targetSubEventId = input.subEventId || undefined;
-    const duplicate = records.find(
-      (r) =>
-        r.associateId === input.associateId &&
-        r.eventId === input.eventId &&
-        (r.subEventId || undefined) === targetSubEventId &&
-        r.status !== "completed"
-    );
+    // Map status: is_active boolean
+    const isActive =
+      input.isActive !== undefined
+        ? input.isActive
+        : input.status
+        ? input.status === "active" || input.status === "scheduled"
+        : true;
 
-    if (duplicate) {
+    // Respect authenticated user session for assigned_by
+    const assignedBy = await this.getAuthenticatedUserId();
+
+    const payload: AssociateAllocationInsert = {
+      associate_id: input.associateId,
+      event_node_id: targetEventNodeId,
+      attendance_access: Boolean(input.attendanceAccess),
+      is_active: isActive,
+      assigned_by: assignedBy,
+    };
+
+    const { data, error } = await supabase
+      .from("associate_allocations")
+      .insert(payload)
+      .select("*")
+      .single();
+
+    if (error) {
+      // Handle unique constraint (associate_id, event_node_id)
+      if (
+        error.code === "23505" ||
+        error.message.includes("associate_event_allocation_unique") ||
+        error.message.includes("unique")
+      ) {
+        throw new Error(
+          "This associate is already allocated to this event or sub-event."
+        );
+      }
+
       throw new Error(
-        `Associate is already allocated to this event context with status '${duplicate.status}'.`
+        `Failed to create allocation in Supabase: ${error.message}`
       );
     }
 
-    const subEvent = event?.subEvents?.find((s) => s.id === input.subEventId);
+    const subEvent = event?.subEvents?.find(
+      (s) => s.id === input.subEventId
+    );
 
-    // Sensible default status: "scheduled" if event is upcoming, otherwise "active"
-    const resolvedStatus: AllocationStatus =
-      input.status || (event?.status === "upcoming" ? "scheduled" : "active");
-
-    const now = new Date().toISOString();
-    const newRecord: AssociateAllocation = {
-      id: `alloc-${Date.now().toString(36)}`,
-      associateId: input.associateId,
-      associateName: associate?.name || "Associate",
-      associateEmail: associate?.email || "",
-      associateDepartment: associate?.department || "General",
-      eventId: input.eventId,
-      eventName: event?.name || "Event",
+    return mapRowToAllocation(data as AssociateAllocationRow, {
+      associateName: associate?.name,
+      associateEmail: associate?.email,
+      associateDepartment: associate?.department,
+      eventName: event?.name,
       subEventId: input.subEventId,
       subEventName: subEvent?.name,
-      attendanceAccess: Boolean(input.attendanceAccess),
-      status: resolvedStatus,
-      allocatedBy: "admin", // Authoritative user id from session
-      allocatedAt: now,
-      updatedAt: now,
-    };
-
-    const updated = [newRecord, ...records];
-    this.saveAllocations(updated);
-
-    return newRecord;
+    });
   }
 
   /**
-   * Update an existing allocation (e.g. toggle attendanceAccess or change status).
+   * Update an existing allocation in Supabase.
    *
-   * @param id - Allocation ID to update
-   * @param input - UpdateAllocationInput (attendanceAccess, status)
+   * @param id - Allocation UUID to update
+   * @param input - UpdateAllocationInput (attendanceAccess, status, isActive)
    * @returns Updated AssociateAllocation
    */
   async updateAllocation(
     id: string,
     input: UpdateAllocationInput
   ): Promise<AssociateAllocation> {
-    // 1. Validation check
     const validation = validateUpdateAllocationInput(input);
     if (!validation.isValid) {
       throw new Error(validation.errors.join(" "));
     }
 
-    // TODO: [Backend Contract] When Django endpoint is ready:
-    // return apiClient<AssociateAllocation>(`/allocations/${id}/`, {
-    //   method: "PATCH",
-    //   body: JSON.stringify(input),
-    // });
+    const supabase = createClient();
 
-    const records = this.getStoredAllocations();
-    const index = records.findIndex((r) => r.id === id);
+    const updates: AssociateAllocationUpdate = {};
 
-    if (index === -1) {
-      throw new Error(`Allocation with ID '${id}' was not found.`);
+    if (input.attendanceAccess !== undefined) {
+      updates.attendance_access = input.attendanceAccess;
     }
 
-    const existing = records[index];
-    const updatedRecord: AssociateAllocation = {
-      ...existing,
-      ...(input.attendanceAccess !== undefined && {
-        attendanceAccess: input.attendanceAccess,
-      }),
-      ...(input.status !== undefined && { status: input.status }),
-      updatedAt: new Date().toISOString(),
-    };
+    if (input.isActive !== undefined) {
+      updates.is_active = input.isActive;
+    } else if (input.status !== undefined) {
+      updates.is_active =
+        input.status === "active" || input.status === "scheduled";
+    }
 
-    records[index] = updatedRecord;
-    this.saveAllocations(records);
+    const { data, error } = await supabase
+      .from("associate_allocations")
+      .update(updates)
+      .eq("id", id)
+      .select("*")
+      .single();
 
-    return updatedRecord;
+    if (error) {
+      throw new Error(
+        `Failed to update allocation '${id}' in Supabase: ${error.message}`
+      );
+    }
+
+    if (!data) {
+      throw new Error(`Allocation with ID '${id}' was not found in Supabase.`);
+    }
+
+    return mapRowToAllocation(data as AssociateAllocationRow);
   }
 
   /**
-   * Delete an allocation record.
+   * Delete an allocation record from Supabase.
    *
-   * @param id - Allocation ID to delete
+   * @param id - Allocation UUID to delete
    * @returns true if deleted
    */
   async deleteAllocation(id: string): Promise<boolean> {
-    // TODO: [Backend Contract] When Django endpoint is ready:
-    // await apiClient<void>(`/allocations/${id}/`, { method: "DELETE" });
-    // return true;
+    const supabase = createClient();
 
-    const records = this.getStoredAllocations();
-    const filtered = records.filter((r) => r.id !== id);
+    const { error } = await supabase
+      .from("associate_allocations")
+      .delete()
+      .eq("id", id);
 
-    if (filtered.length === records.length) {
-      throw new Error(`Allocation with ID '${id}' was not found.`);
+    if (error) {
+      throw new Error(
+        `Failed to delete allocation '${id}' from Supabase: ${error.message}`
+      );
     }
 
-    this.saveAllocations(filtered);
     return true;
   }
 
   /**
    * Contract Method for Associate Dashboard:
-   * Returns allocations assigned to a specific associate.
+   * Returns active allocations assigned to a specific associate.
    *
-   * @param associateId - User ID of the associate
+   * @param associateId - UUID of the associate
    * @returns Allocations assigned to the associate
    */
   async getAssociateAllocations(
     associateId: string
   ): Promise<AssociateAllocation[]> {
-    return this.getAllocations({ associateId });
+    return this.getAllocations({ associateId, isActive: true });
   }
 
   /**
    * Contract Method for Attendance Module:
-   * Checks whether an associate has active Attendance Access for a given event.
+   * Checks whether an associate has active Attendance Access for a given event node.
+   * Leverages the idx_associate_allocations_event_active index for optimal performance.
    *
-   * @param associateId - User ID of the associate
-   * @param eventId - ID of the event
-   * @returns boolean true if allocated and attendanceAccess is ON
+   * @param associateId - UUID of the associate
+   * @param eventId - UUID of the event or event_node
+   * @returns boolean true if allocated, active, and attendance_access is true
    */
   async checkAttendanceAccess(
     associateId: string,
     eventId: string
   ): Promise<boolean> {
-    const allocations = await this.getAllocations({
-      associateId,
-      eventId,
-    });
+    const supabase = createClient();
 
-    const activeAllocation = allocations.find(
-      (a) => a.status === "active" && a.attendanceAccess === true
-    );
+    const { data, error } = await supabase
+      .from("associate_allocations")
+      .select("attendance_access, is_active")
+      .eq("associate_id", associateId)
+      .eq("event_node_id", eventId)
+      .eq("is_active", true)
+      .maybeSingle();
 
-    return Boolean(activeAllocation);
+    if (error || !data) {
+      return false;
+    }
+
+    return Boolean(data.attendance_access);
   }
 }
 

@@ -15,6 +15,7 @@ export interface SubEvent {
   time: string;
   venue: string;
   description: string;
+  children?: SubEvent[];
 }
 
 export interface Event {

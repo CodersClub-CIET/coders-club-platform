@@ -196,7 +196,7 @@ export default function CoordinatorAttendanceView() {
             variant="outline"
             onClick={handleExportCSV}
             disabled={exporting || records.length === 0}
-            className="bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-white text-xs font-semibold py-2 px-3.5 rounded-xl gap-2 shadow-sm transition-all"
+            className="bg-[#1D2026]/80 hover:bg-[#1D2026] border-slate-700 text-white text-xs font-semibold py-2 px-3.5 rounded-xl gap-2 shadow-sm transition-all"
           >
             <Download className="size-3.5" />
             {exporting ? "Exporting..." : "Coordinator CSV"}
@@ -205,7 +205,7 @@ export default function CoordinatorAttendanceView() {
           <Button
             type="button"
             onClick={() => setShowCheckInModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 px-4 rounded-xl gap-2 shadow-md transition-all"
+            className="bg-[#FF2A1A] hover:bg-[#FF2A1A] text-white text-xs font-semibold py-2 px-4 rounded-xl gap-2 shadow-md transition-all"
           >
             <Plus className="size-3.5" />
             Check-in Coordinator
@@ -215,58 +215,58 @@ export default function CoordinatorAttendanceView() {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+        <div className="bg-[#111318] p-5 rounded-2xl border border-[#292D33] shadow-sm flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-[#FF2A1A]/10 text-[#FF2A1A] border border-indigo-100">
             <UserCheck className="size-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-xs font-semibold text-[#686C74] uppercase tracking-wider">
               Total Coordinator Scans
             </div>
-            <div className="text-2xl font-extrabold text-slate-900">{records.length}</div>
-            <div className="text-xs text-slate-400">Total check-in events recorded</div>
+            <div className="text-2xl font-extrabold text-[#F3F1EC]">{records.length}</div>
+            <div className="text-xs text-[#686C74]">Total check-in events recorded</div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div className="bg-[#111318] p-5 rounded-2xl border border-[#292D33] shadow-sm flex items-center gap-4">
           <div className="p-3 rounded-xl bg-purple-50 text-purple-600 border border-purple-100">
             <Briefcase className="size-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-xs font-semibold text-[#686C74] uppercase tracking-wider">
               Distinct Coordinators
             </div>
-            <div className="text-2xl font-extrabold text-slate-900">{distinctCoordinators}</div>
-            <div className="text-xs text-slate-400">Unique leads & team members</div>
+            <div className="text-2xl font-extrabold text-[#F3F1EC]">{distinctCoordinators}</div>
+            <div className="text-xs text-[#686C74]">Unique leads & team members</div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div className="bg-[#111318] p-5 rounded-2xl border border-[#292D33] shadow-sm flex items-center gap-4">
           <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
             <ShieldCheck className="size-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-xs font-semibold text-[#686C74] uppercase tracking-wider">
               Duplicate Protection
             </div>
             <div className="text-2xl font-extrabold text-emerald-700">Active</div>
-            <div className="text-xs text-slate-400">Database + Local verification</div>
+            <div className="text-xs text-[#686C74]">Database + Local verification</div>
           </div>
         </div>
       </div>
 
       {/* Filters Bar: Session Dropdown + Search */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-[#111318] rounded-2xl border border-[#292D33] p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="flex items-center gap-2">
-            <Filter className="size-4 text-slate-400" />
-            <span className="text-xs font-bold text-slate-700 whitespace-nowrap">Session:</span>
+            <Filter className="size-4 text-[#686C74]" />
+            <span className="text-xs font-bold text-[#9B9EA6] whitespace-nowrap">Session:</span>
           </div>
 
           <select
             value={selectedSessionId}
             onChange={(e) => setSelectedSessionId(e.target.value)}
-            className="w-full sm:w-64 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-600 transition-all"
+            className="w-full sm:w-64 bg-[#08090B] border border-[#292D33] rounded-xl px-3 py-1.5 text-xs font-semibold text-[#F3F1EC] focus:outline-none focus:border-indigo-600 transition-all"
           >
             <option value="all">All Sessions ({sessions.length})</option>
             {sessions.map((s) => (
@@ -278,36 +278,36 @@ export default function CoordinatorAttendanceView() {
         </div>
 
         <div className="relative w-full sm:w-72">
-          <Search className="size-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="size-4 text-[#686C74] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search coordinator name, ID, or role..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-600 transition-all"
+            className="w-full pl-9 pr-4 py-2 bg-[#08090B] border border-[#292D33] rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-600 transition-all"
           />
         </div>
       </div>
 
       {/* Coordinator Records Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+      <div className="bg-[#111318] rounded-2xl border border-[#292D33] overflow-hidden shadow-sm">
         {loading ? (
           <div className="p-12 text-center">
-            <RefreshCw className="size-6 text-indigo-600 animate-spin mx-auto mb-2" />
-            <p className="text-xs text-slate-500">Loading coordinator attendance records...</p>
+            <RefreshCw className="size-6 text-[#FF2A1A] animate-spin mx-auto mb-2" />
+            <p className="text-xs text-[#686C74]">Loading coordinator attendance records...</p>
           </div>
         ) : filteredRecords.length === 0 ? (
           <div className="p-12 text-center">
             <Briefcase className="size-10 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-sm font-bold text-slate-700">No Coordinator Records Found</h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+            <h3 className="text-sm font-bold text-[#9B9EA6]">No Coordinator Records Found</h3>
+            <p className="text-xs text-[#686C74] mt-1 max-w-sm mx-auto">
               Check in coordinators using the &quot;Check-in Coordinator&quot; button or have them scan the session QR code using Associate mode.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+              <thead className="bg-[#08090B] border-b border-[#292D33] text-[#9B9EA6] font-semibold">
                 <tr>
                   <th className="py-3 px-4">Coordinator</th>
                   <th className="py-3 px-4">Role & Department</th>
@@ -326,24 +326,24 @@ export default function CoordinatorAttendanceView() {
                   const role = r.markedBy?.replace(" (Self Scan)", "").replace(" (Coordinator Desk)", "") || "Executive";
 
                   return (
-                    <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
+                    <tr key={r.id} className="hover:bg-[#08090B]/70 transition-colors">
                       <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900">{name}</div>
-                        <div className="text-[11px] font-mono text-indigo-600">{coordId}</div>
+                        <div className="font-bold text-[#F3F1EC]">{name}</div>
+                        <div className="text-[11px] font-mono text-[#FF2A1A]">{coordId}</div>
                       </td>
                       <td className="py-3 px-4">
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800">
                           {role}
                         </span>
-                        <div className="text-[10px] text-slate-500 mt-0.5">
+                        <div className="text-[10px] text-[#686C74] mt-0.5">
                           Dept: {r.studentDepartment || "Executive"}
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="font-medium text-slate-800">{s?.sessionName || "Session"}</div>
-                        <div className="text-[10px] text-slate-400 capitalize">{s?.period || "N/A"} Period</div>
+                        <div className="font-medium text-[#F3F1EC]">{s?.sessionName || "Session"}</div>
+                        <div className="text-[10px] text-[#686C74] capitalize">{s?.period || "N/A"} Period</div>
                       </td>
-                      <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
+                      <td className="py-3 px-4 text-[#9B9EA6] font-mono text-[11px]">
                         {new Date(r.markedAt).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -351,7 +351,7 @@ export default function CoordinatorAttendanceView() {
                         })}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-[11px] text-slate-600 font-medium">
+                        <span className="text-[11px] text-[#9B9EA6] font-medium">
                           {r.verificationMethod === "qr_scan" ? "QR Scanned" : "Coordinator Desk"}
                         </span>
                       </td>
@@ -366,7 +366,7 @@ export default function CoordinatorAttendanceView() {
                               ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                               : r.status === "late"
                               ? "bg-amber-50 text-amber-800 border-amber-200"
-                              : "bg-slate-50 text-slate-700 border-slate-200"
+                              : "bg-[#08090B] text-[#9B9EA6] border-[#292D33]"
                           }`}
                         >
                           <option value="present">Present</option>
@@ -378,7 +378,7 @@ export default function CoordinatorAttendanceView() {
                         <button
                           type="button"
                           onClick={() => handleDeleteRecord(r.id, name)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          className="p-1.5 text-[#686C74] hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                           title="Remove coordinator attendance"
                         >
                           <Trash2 className="size-3.5" />
@@ -395,9 +395,9 @@ export default function CoordinatorAttendanceView() {
 
       {/* Check-in Coordinator Modal */}
       {showCheckInModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#08090B]/80 backdrop-blur-sm">
+          <div className="relative w-full max-w-md bg-[#111318] rounded-2xl shadow-2xl border border-[#292D33] overflow-hidden">
+            <div className="px-6 py-4 bg-[#08090B] text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Briefcase className="size-5 text-indigo-400" />
                 <h3 className="text-sm font-bold">Check-in Event Coordinator</h3>
@@ -405,7 +405,7 @@ export default function CoordinatorAttendanceView() {
               <button
                 type="button"
                 onClick={() => setShowCheckInModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="text-[#686C74] hover:text-white p-1 rounded-lg"
               >
                 <X className="size-4" />
               </button>
@@ -420,14 +420,14 @@ export default function CoordinatorAttendanceView() {
               )}
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">
+                <label className="font-semibold text-[#9B9EA6] block mb-1">
                   Attendance Session <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={formData.sessionId}
                   onChange={(e) => setFormData({ ...formData, sessionId: e.target.value })}
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-600"
+                  className="w-full bg-[#08090B] border border-[#292D33] rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-600"
                 >
                   <option value="">Select an active session</option>
                   {sessions.map((s) => (
@@ -439,7 +439,7 @@ export default function CoordinatorAttendanceView() {
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">
+                <label className="font-semibold text-[#9B9EA6] block mb-1">
                   Coordinator Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -448,12 +448,12 @@ export default function CoordinatorAttendanceView() {
                   placeholder="e.g. Gowtham R"
                   value={formData.coordinatorName}
                   onChange={(e) => setFormData({ ...formData, coordinatorName: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-600"
+                  className="w-full bg-[#08090B] border border-[#292D33] rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-600"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">
+                <label className="font-semibold text-[#9B9EA6] block mb-1">
                   Coordinator ID / Reg No <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -462,20 +462,20 @@ export default function CoordinatorAttendanceView() {
                   placeholder="e.g. CIET-CORD-01 or 917621104001"
                   value={formData.coordinatorId}
                   onChange={(e) => setFormData({ ...formData, coordinatorId: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-600 uppercase"
+                  className="w-full bg-[#08090B] border border-[#292D33] rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-600 uppercase"
                 />
-                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                <span className="text-[10px] text-[#686C74] mt-0.5 block">
                   Enforces database duplicate verification across session
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Department</label>
+                  <label className="font-semibold text-[#9B9EA6] block mb-1">Department</label>
                   <select
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-600"
+                    className="w-full bg-[#08090B] border border-[#292D33] rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-600"
                   >
                     {DEPARTMENTS.map((dept) => (
                       <option key={dept} value={dept}>
@@ -486,11 +486,11 @@ export default function CoordinatorAttendanceView() {
                 </div>
 
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Club Role</label>
+                  <label className="font-semibold text-[#9B9EA6] block mb-1">Club Role</label>
                   <select
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-600"
+                    className="w-full bg-[#08090B] border border-[#292D33] rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-600"
                   >
                     {COORDINATOR_ROLES.map((role) => (
                       <option key={role} value={role}>
@@ -501,7 +501,7 @@ export default function CoordinatorAttendanceView() {
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <div className="pt-3 border-t border-[#292D33] flex items-center justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -513,7 +513,7 @@ export default function CoordinatorAttendanceView() {
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold"
+                  className="bg-[#FF2A1A] hover:bg-[#FF2A1A] text-white text-xs font-semibold"
                 >
                   {submitting ? "Checking In..." : "Confirm Check-in"}
                 </Button>

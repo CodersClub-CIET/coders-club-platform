@@ -1,4 +1,5 @@
-import type { PredefinedEvent } from "./types.ts";
+// Legacy test fixtures only. Production routes must never import this module.
+import type { PredefinedEvent } from "./legacy-types.ts";
 
 /**
  * Predefined club events for quick selection in the UI and server validation
