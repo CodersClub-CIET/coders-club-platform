@@ -2,43 +2,45 @@
 
 import type { TeamDetail } from "@/lib/team-management/types";
 
-const CARD = "bg-white border border-slate-200 rounded-2xl shadow-sm p-5";
+const CARD = "rounded-xl border border-[#292D33] bg-[#111318] p-5";
 
 export function TeamDetailsPanel({ team }: { team: TeamDetail }) {
   return (
     <section aria-label="Team details" className={CARD}>
-      <h3 className="text-base font-bold text-slate-900 mb-3">Team Details</h3>
+      <h3 className="font-mono text-[11px] uppercase tracking-wider text-[#9B9EA6] mb-4">
+        Team Details
+      </h3>
 
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
         <div>
-          <dt className="text-xs uppercase tracking-wide text-slate-500">
+          <dt className="font-mono text-[10px] uppercase tracking-wider text-[#686C74]">
             Team Name
           </dt>
-          <dd className="mt-1 font-semibold text-slate-900 break-words">
+          <dd className="mt-1 font-semibold text-[#F3F1EC] break-words">
             {team.name}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-wide text-slate-500">
+          <dt className="font-mono text-[10px] uppercase tracking-wider text-[#686C74]">
             Status
           </dt>
-          <dd className="mt-1 text-slate-900 capitalize">{team.status}</dd>
+          <dd className="mt-1 text-[#9B9EA6] capitalize font-mono text-xs">{team.status}</dd>
         </div>
         {team.description && (
           <div className="sm:col-span-2">
-            <dt className="text-xs uppercase tracking-wide text-slate-500">
+            <dt className="font-mono text-[10px] uppercase tracking-wider text-[#686C74]">
               Description
             </dt>
-            <dd className="mt-1 text-slate-700 whitespace-pre-wrap break-words">
+            <dd className="mt-1 text-[#9B9EA6] whitespace-pre-wrap break-words text-sm">
               {team.description}
             </dd>
           </div>
         )}
         <div className="sm:col-span-2">
-          <dt className="text-xs uppercase tracking-wide text-slate-500">
+          <dt className="font-mono text-[10px] uppercase tracking-wider text-[#686C74]">
             Team ID
           </dt>
-          <dd className="mt-1 font-mono text-slate-900 break-all">{team.id}</dd>
+          <dd className="mt-1 font-mono text-xs text-[#686C74] break-all">{team.id}</dd>
         </div>
       </dl>
     </section>
@@ -48,12 +50,14 @@ export function TeamDetailsPanel({ team }: { team: TeamDetail }) {
 export function TeamScorePanel({ team }: { team: TeamDetail }) {
   return (
     <section aria-label="Team score" className={CARD}>
-      <h3 className="text-base font-bold text-slate-900 mb-3">Team Score</h3>
-      <div className="flex items-center gap-3">
-        <p className="text-3xl font-extrabold text-slate-900">
+      <h3 className="font-mono text-[11px] uppercase tracking-wider text-[#9B9EA6] mb-4">
+        Team Score
+      </h3>
+      <div className="flex items-baseline gap-3">
+        <p className="font-display text-4xl font-extrabold text-[#F2B84B]">
           {team.score.toLocaleString("en-IN", { maximumFractionDigits: 20 })}
-          <span className="ml-2 text-sm font-medium text-slate-500">Points</span>
         </p>
+        <span className="font-mono text-xs text-[#686C74] uppercase tracking-wider">Points</span>
       </div>
     </section>
   );
@@ -62,9 +66,11 @@ export function TeamScorePanel({ team }: { team: TeamDetail }) {
 export function TeamCoinPanel({ team }: { team: TeamDetail }) {
   return (
     <section aria-label="Coin balances" className={CARD}>
-      <h3 className="text-base font-bold text-slate-900 mb-3">Coin Balances</h3>
+      <h3 className="font-mono text-[11px] uppercase tracking-wider text-[#9B9EA6] mb-4">
+        Coin Balances
+      </h3>
       {team.coins.length === 0 ? (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-[#686C74] font-mono py-2 text-center">
           No enabled coin types are configured yet.
         </p>
       ) : (
@@ -72,12 +78,12 @@ export function TeamCoinPanel({ team }: { team: TeamDetail }) {
           {team.coins.map((coin) => (
             <li
               key={coin.coinTypeId}
-              className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3"
+              className="flex items-center justify-between gap-3 rounded-lg border border-[#292D33] bg-[#0D0F12] px-4 py-3"
             >
-              <span className="text-sm text-slate-700 break-words min-w-0">
+              <span className="text-sm text-[#9B9EA6] break-words min-w-0">
                 {coin.name}
               </span>
-              <span className="font-bold text-slate-900 shrink-0">
+              <span className="font-mono font-bold text-[#F2B84B] shrink-0">
                 {coin.balance.toLocaleString("en-IN", { maximumFractionDigits: 20 })}
               </span>
             </li>

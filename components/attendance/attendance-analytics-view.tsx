@@ -52,9 +52,9 @@ export default function AttendanceAnalyticsView() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-        <RefreshCw className="size-8 text-indigo-600 animate-spin mx-auto mb-3" />
-        <p className="text-sm font-medium text-slate-600">Compiling institution attendance analytics...</p>
+      <div className="bg-[#111318] rounded-2xl border border-[#292D33] p-12 text-center shadow-sm">
+        <RefreshCw className="size-8 text-[#FF2A1A] animate-spin mx-auto mb-3" />
+        <p className="text-sm font-medium text-[#9B9EA6]">Compiling institution attendance analytics...</p>
       </div>
     );
   }
@@ -85,7 +85,7 @@ export default function AttendanceAnalyticsView() {
           type="button"
           onClick={handleMasterExport}
           disabled={exporting || totalEntries === 0}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-2 px-4 rounded-xl gap-2 shadow-md shrink-0 transition-all"
+          className="bg-[#FF2A1A] hover:bg-[#FF2A1A] text-white font-semibold text-xs py-2 px-4 rounded-xl gap-2 shadow-md shrink-0 transition-all"
         >
           <Download className="size-3.5" />
           {exporting ? "Generating Sheet..." : "Export Master CSV (All Sessions)"}
@@ -94,46 +94,46 @@ export default function AttendanceAnalyticsView() {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+        <div className="bg-[#111318] p-5 rounded-2xl border border-[#292D33] shadow-sm flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-[#FF2A1A]/10 text-[#FF2A1A] border border-indigo-100">
             <Users className="size-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Scans</div>
-            <div className="text-2xl font-extrabold text-slate-900">{analytics.totalRecords}</div>
-            <div className="text-xs text-slate-400">Recorded across platform</div>
+            <div className="text-xs font-semibold text-[#686C74] uppercase tracking-wider">Total Scans</div>
+            <div className="text-2xl font-extrabold text-[#F3F1EC]">{analytics.totalRecords}</div>
+            <div className="text-xs text-[#686C74]">Recorded across platform</div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div className="bg-[#111318] p-5 rounded-2xl border border-[#292D33] shadow-sm flex items-center gap-4">
           <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
             <GraduationCap className="size-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Unique Students</div>
-            <div className="text-2xl font-extrabold text-slate-900">{analytics.distinctStudents}</div>
-            <div className="text-xs text-slate-400">Distinct Roll Numbers</div>
+            <div className="text-xs font-semibold text-[#686C74] uppercase tracking-wider">Unique Students</div>
+            <div className="text-2xl font-extrabold text-[#F3F1EC]">{analytics.distinctStudents}</div>
+            <div className="text-xs text-[#686C74]">Distinct Roll Numbers</div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div className="bg-[#111318] p-5 rounded-2xl border border-[#292D33] shadow-sm flex items-center gap-4">
           <div className="p-3 rounded-xl bg-purple-50 text-purple-600 border border-purple-100">
             <UserCheck className="size-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Associates</div>
-            <div className="text-2xl font-extrabold text-slate-900">{analytics.distinctAssociates}</div>
-            <div className="text-xs text-slate-400">Club Executives & Leads</div>
+            <div className="text-xs font-semibold text-[#686C74] uppercase tracking-wider">Active Associates</div>
+            <div className="text-2xl font-extrabold text-[#F3F1EC]">{analytics.distinctAssociates}</div>
+            <div className="text-xs text-[#686C74]">Club Executives & Leads</div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+        <div className="bg-[#111318] p-5 rounded-2xl border border-[#292D33] shadow-sm flex items-center gap-4">
           <div className="p-3 rounded-xl bg-amber-50 text-amber-600 border border-amber-100">
             <TrendingUp className="size-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Sessions</div>
-            <div className="text-2xl font-extrabold text-slate-900">{analytics.totalSessions}</div>
+            <div className="text-xs font-semibold text-[#686C74] uppercase tracking-wider">Total Sessions</div>
+            <div className="text-2xl font-extrabold text-[#F3F1EC]">{analytics.totalSessions}</div>
             <div className="text-xs text-emerald-600 font-medium">{analytics.activeSessions} active now</div>
           </div>
         </div>
@@ -142,19 +142,19 @@ export default function AttendanceAnalyticsView() {
       {/* Main Grid: Department Distribution + Year & Period Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Department Breakdown (2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-[#111318] rounded-2xl border border-[#292D33] p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
-              <Building className="size-5 text-indigo-600" />
-              <h3 className="text-base font-bold text-slate-900">Department Participation</h3>
+              <Building className="size-5 text-[#FF2A1A]" />
+              <h3 className="text-base font-bold text-[#F3F1EC]">Department Participation</h3>
             </div>
-            <span className="text-xs text-slate-500 font-medium">
+            <span className="text-xs text-[#686C74] font-medium">
               {deptEntries.length} departments recorded
             </span>
           </div>
 
           {deptEntries.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 text-xs">
+            <div className="text-center py-8 text-[#686C74] text-xs">
               No departmental attendance recorded yet.
             </div>
           ) : (
@@ -164,14 +164,14 @@ export default function AttendanceAnalyticsView() {
                 return (
                   <div key={dept} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-800">{dept}</span>
-                      <span className="text-slate-500 font-mono">
-                        {count} attendees <span className="text-slate-400">({percentage}%)</span>
+                      <span className="font-semibold text-[#F3F1EC]">{dept}</span>
+                      <span className="text-[#686C74] font-mono">
+                        {count} attendees <span className="text-[#686C74]">({percentage}%)</span>
                       </span>
                     </div>
-                    <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-2.5 w-full bg-[#171A20] rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                        className="h-full bg-[#FF2A1A] rounded-full transition-all duration-500"
                         style={{ width: `${Math.max(percentage, 4)}%` }}
                       />
                     </div>
@@ -185,10 +185,10 @@ export default function AttendanceAnalyticsView() {
         {/* Right Column: Year Breakdown & Period Comparison */}
         <div className="space-y-6">
           {/* Year Distribution */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-[#111318] rounded-2xl border border-[#292D33] p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
-              <GraduationCap className="size-5 text-indigo-600" />
-              <h3 className="text-base font-bold text-slate-900">Year-wise Distribution</h3>
+              <GraduationCap className="size-5 text-[#FF2A1A]" />
+              <h3 className="text-base font-bold text-[#F3F1EC]">Year-wise Distribution</h3>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -202,14 +202,14 @@ export default function AttendanceAnalyticsView() {
                 return (
                   <div
                     key={year}
-                    className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 flex flex-col justify-between"
+                    className="p-3.5 rounded-xl border border-[#292D33] bg-[#08090B]/70 flex flex-col justify-between"
                   >
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                    <span className="text-[11px] font-bold text-[#686C74] uppercase tracking-wide">
                       Year {year}
                     </span>
                     <div className="mt-2">
-                      <div className="text-xl font-extrabold text-slate-900">{count}</div>
-                      <div className="text-[10px] text-slate-500">{percentage}% of students</div>
+                      <div className="text-xl font-extrabold text-[#F3F1EC]">{count}</div>
+                      <div className="text-[10px] text-[#686C74]">{percentage}% of students</div>
                     </div>
                   </div>
                 );
@@ -218,10 +218,10 @@ export default function AttendanceAnalyticsView() {
           </div>
 
           {/* Period Distribution */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-[#111318] rounded-2xl border border-[#292D33] p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
-              <PieChart className="size-5 text-indigo-600" />
-              <h3 className="text-base font-bold text-slate-900">Period Distribution</h3>
+              <PieChart className="size-5 text-[#FF2A1A]" />
+              <h3 className="text-base font-bold text-[#F3F1EC]">Period Distribution</h3>
             </div>
 
             <div className="space-y-3">
@@ -240,7 +240,7 @@ export default function AttendanceAnalyticsView() {
 
               <div className="p-3 rounded-xl border border-blue-100 bg-blue-50/60 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <Moon className="size-4 text-blue-600" />
+                  <Moon className="size-4 text-[#FF2A1A]" />
                   <div>
                     <div className="text-xs font-bold text-blue-900">Afternoon Sessions</div>
                     <div className="text-[10px] text-blue-700">Tracked check-ins</div>

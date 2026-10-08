@@ -18,24 +18,24 @@ export default function Pagination({
   }
 
   return (
-    <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+    <div className="flex items-center justify-between rounded-xl border border-[#292D33] bg-[#111318] px-4 py-3 shadow-sm">
       <button
         type="button"
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-[#292D33] bg-[#0D0F12] px-3 py-2 text-[11px] font-mono uppercase tracking-wider font-bold text-[#F3F1EC] transition hover:bg-[#1D2026] disabled:cursor-not-allowed disabled:opacity-40"
       >
         <ChevronLeft size={16} />
         Previous
       </button>
 
-      <span className="text-sm text-gray-500">
+      <span className="text-[11px] font-mono uppercase tracking-widest text-[#9B9EA6]">
         Page{" "}
-        <span className="font-semibold text-gray-800">
+        <span className="font-bold text-[#F3F1EC] bg-[#FF2A1A] px-2 py-0.5 rounded">
           {currentPage}
         </span>{" "}
         of{" "}
-        <span className="font-semibold text-gray-800">
+        <span className="font-bold text-[#F3F1EC]">
           {totalPages}
         </span>
       </span>
@@ -44,7 +44,7 @@ export default function Pagination({
         type="button"
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(currentPage + 1)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-[#292D33] bg-[#0D0F12] px-3 py-2 text-[11px] font-mono uppercase tracking-wider font-bold text-[#F3F1EC] transition hover:bg-[#1D2026] disabled:cursor-not-allowed disabled:opacity-40"
       >
         Next
         <ChevronRight size={16} />

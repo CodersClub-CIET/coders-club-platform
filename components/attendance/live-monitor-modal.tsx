@@ -150,22 +150,22 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl max-h-[90vh] rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-4xl max-h-[90vh] rounded-2xl bg-[#111318] shadow-2xl border border-[#292D33] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/80 shrink-0">
+        <div className="flex items-center justify-between border-b border-[#292D33] px-6 py-4 bg-[#08090B]/80 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200">
               <Activity className="size-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900">{session.sessionName}</h2>
+                <h2 className="text-base font-bold text-[#F3F1EC]">{session.sessionName}</h2>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
                   <Radio className="size-3 animate-pulse text-emerald-600" />
                   Live Realtime
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[#686C74]">
                 {session.eventName} &bull; <span className="capitalize">{session.period} Period</span>
               </p>
             </div>
@@ -189,10 +189,10 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
               variant="outline"
               size="sm"
               onClick={() => setShowODModal(true)}
-              className="text-xs font-semibold text-slate-700 gap-1.5 border-slate-200 hover:bg-slate-100"
+              className="text-xs font-semibold text-[#9B9EA6] gap-1.5 border-[#292D33] hover:bg-[#171A20]"
               title="Generate Official On-Duty (OD) Sheet for HODs/Faculty"
             >
-              <FileText className="size-3.5 text-indigo-600" />
+              <FileText className="size-3.5 text-[#FF2A1A]" />
               OD Report
             </Button>
 
@@ -202,17 +202,17 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
               size="sm"
               onClick={handleExportCSV}
               disabled={exporting || records.length === 0}
-              className="text-xs font-semibold text-slate-700 gap-1.5 border-slate-200 hover:bg-slate-100"
+              className="text-xs font-semibold text-[#9B9EA6] gap-1.5 border-[#292D33] hover:bg-[#171A20]"
               title="Download CSV for OD / College Records"
             >
-              <Download className="size-3.5 text-indigo-600" />
+              <Download className="size-3.5 text-[#FF2A1A]" />
               {exporting ? "Exporting..." : "Export CSV"}
             </Button>
 
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors ml-1"
+              className="p-1.5 rounded-lg text-[#686C74] hover:text-[#9B9EA6] hover:bg-[#171A20] transition-colors ml-1"
             >
               <X className="size-5" />
             </button>
@@ -220,42 +220,42 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 gap-4 px-6 py-4 border-b border-slate-100 bg-white shrink-0">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+        <div className="grid grid-cols-2 gap-4 px-6 py-4 border-b border-[#292D33] bg-[#111318] shrink-0">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-[#08090B] border border-[#292D33]">
+            <div className="p-2 rounded-lg bg-[#FF2A1A]/10 text-[#FF2A1A]">
               <GraduationCap className="size-4" />
             </div>
             <div>
-              <div className="text-xs font-medium text-slate-500">Verified Students</div>
-              <div className="text-xl font-extrabold text-slate-900">{records.length}</div>
+              <div className="text-xs font-medium text-[#686C74]">Verified Students</div>
+              <div className="text-xl font-extrabold text-[#F3F1EC]">{records.length}</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-[#08090B] border border-[#292D33]">
             <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
               <BarChart2 className="size-4" />
             </div>
             <div>
-              <div className="text-xs font-medium text-slate-500">Departments Represented</div>
-              <div className="text-xl font-extrabold text-slate-900">{Object.keys(deptCounts).length}</div>
+              <div className="text-xs font-medium text-[#686C74]">Departments Represented</div>
+              <div className="text-xl font-extrabold text-[#F3F1EC]">{Object.keys(deptCounts).length}</div>
             </div>
           </div>
         </div>
 
         {/* Department Distribution Strip */}
         {records.length > 0 && Object.keys(deptCounts).length > 0 && (
-          <div className="px-6 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto text-[11px] shrink-0">
-            <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider shrink-0 flex items-center gap-1 mr-1">
-              <BarChart2 className="size-3 text-indigo-500" />
+          <div className="px-6 py-2 bg-[#08090B] border-b border-[#292D33] flex items-center gap-1.5 overflow-x-auto text-[11px] shrink-0">
+            <span className="text-[#686C74] font-semibold uppercase text-[10px] tracking-wider shrink-0 flex items-center gap-1 mr-1">
+              <BarChart2 className="size-3 text-[#FF2A1A]" />
               Depts:
             </span>
             {Object.entries(deptCounts).map(([dept, count]) => (
               <span
                 key={dept}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-700 font-medium shrink-0"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#111318] border border-[#292D33] text-[#9B9EA6] font-medium shrink-0"
               >
                 <span>{dept}</span>
-                <span className="font-bold text-indigo-600 bg-indigo-50 px-1 rounded text-[10px]">
+                <span className="font-bold text-[#FF2A1A] bg-[#FF2A1A]/10 px-1 rounded text-[10px]">
                   {count}
                 </span>
               </span>
@@ -264,27 +264,27 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
         )}
 
         {/* Search & Filter Bar */}
-        <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+        <div className="px-6 py-3 border-b border-[#292D33] bg-[#08090B]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative w-64">
-              <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
+              <Search className="absolute left-3 top-2.5 size-4 text-[#686C74]" />
               <input
                 type="text"
                 placeholder="Search Reg No, Name, Dept..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#111318] border border-[#292D33] rounded-lg text-[#F3F1EC] placeholder-slate-400 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
-            <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200">
+            <div className="flex items-center gap-1 bg-[#111318] p-1 rounded-lg border border-[#292D33]">
               <button
                 type="button"
                 onClick={() => setAttendeeFilter("all")}
                 className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
                   attendeeFilter === "all"
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-[#08090B] text-white"
+                    : "text-[#9B9EA6] hover:bg-[#171A20]"
                 }`}
               >
                 All ({records.length})
@@ -294,8 +294,8 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                 onClick={() => setAttendeeFilter("student")}
                 className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
                   attendeeFilter === "student"
-                    ? "bg-indigo-600 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-[#FF2A1A] text-white"
+                    : "text-[#9B9EA6] hover:bg-[#171A20]"
                 }`}
               >
                 Participants ({studentCount})
@@ -306,7 +306,7 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                 className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
                   attendeeFilter === "associate"
                     ? "bg-purple-600 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
+                    : "text-[#9B9EA6] hover:bg-[#171A20]"
                 }`}
               >
                 Coordinators ({associateCount})
@@ -314,7 +314,7 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
             </div>
           </div>
 
-          <div className="text-xs text-slate-400 font-mono">
+          <div className="text-xs text-[#686C74] font-mono">
             Showing {filteredRecords.length} records
           </div>
         </div>
@@ -324,15 +324,15 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
               <div className="size-8 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin" />
-              <p className="text-xs text-slate-500 font-medium">Connecting to Supabase Realtime...</p>
+              <p className="text-xs text-[#686C74] font-medium">Connecting to Supabase Realtime...</p>
             </div>
           ) : filteredRecords.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="p-3 rounded-full bg-slate-100 text-slate-400 mb-2">
+              <div className="p-3 rounded-full bg-[#171A20] text-[#686C74] mb-2">
                 <Users className="size-6" />
               </div>
-              <p className="text-sm font-semibold text-slate-700">No attendance recorded yet</p>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-sm font-semibold text-[#9B9EA6]">No attendance recorded yet</p>
+              <p className="text-xs text-[#686C74] mt-1">
                 Attendees will appear here in real time as they scan the QR code or are added manually.
               </p>
               {session.isActive && (
@@ -351,7 +351,7 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
           ) : (
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                <tr className="border-b border-[#292D33] text-[#686C74] font-semibold uppercase tracking-wider text-[10px]">
                   <th className="py-2.5 px-3">Attendee</th>
                   <th className="py-2.5 px-3">Class / Role</th>
                   <th className="py-2.5 px-3">Verification</th>
@@ -362,18 +362,18 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredRecords.map((record) => (
-                  <tr key={record.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={record.id} className="hover:bg-[#08090B]/80 transition-colors">
                     <td className="py-2.5 px-3">
                       {record.attendeeType === "student" ? (
                         <div>
-                          <div className="font-semibold text-slate-800">{record.studentName}</div>
-                          <div className="font-mono text-[11px] text-slate-400">
+                          <div className="font-semibold text-[#F3F1EC]">{record.studentName}</div>
+                          <div className="font-mono text-[11px] text-[#686C74]">
                             {record.studentRegNo}
                           </div>
                         </div>
                       ) : (
                         <div>
-                          <div className="font-semibold text-slate-800">{record.associateName}</div>
+                          <div className="font-semibold text-[#F3F1EC]">{record.associateName}</div>
                           <div className="text-[11px] text-purple-600 font-mono font-medium">
                             {record.associateUserId || "Associate"}
                           </div>
@@ -383,7 +383,7 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
 
                     <td className="py-2.5 px-3">
                       {record.attendeeType === "student" ? (
-                        <span className="text-slate-600 font-medium">
+                        <span className="text-[#9B9EA6] font-medium">
                           {record.studentDepartment} &bull; {record.studentYear} ({record.studentSection})
                         </span>
                       ) : (
@@ -392,7 +392,7 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                             {record.markedBy?.replace(" (Self Scan)", "") || "Associate"}
                           </span>
                           {record.studentDepartment && (
-                            <span className="text-slate-500 font-medium">{record.studentDepartment}</span>
+                            <span className="text-[#686C74] font-medium">{record.studentDepartment}</span>
                           )}
                         </div>
                       )}
@@ -406,14 +406,14 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                             Manual Entry
                           </span>
                           {record.markedBy && (
-                            <div className="text-[10px] text-slate-400 mt-0.5">
+                            <div className="text-[10px] text-[#686C74] mt-0.5">
                               By {record.markedBy}
                             </div>
                           )}
                         </div>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                          <CheckCircle2 className="size-3 text-indigo-600" />
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-700 bg-[#FF2A1A]/10 px-2 py-0.5 rounded border border-indigo-100">
+                          <CheckCircle2 className="size-3 text-[#FF2A1A]" />
                           QR Scanned
                         </span>
                       )}
@@ -437,7 +437,7 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
                       </select>
                     </td>
 
-                    <td className="py-2.5 px-3 text-right font-mono text-slate-400">
+                    <td className="py-2.5 px-3 text-right font-mono text-[#686C74]">
                       <span className="inline-flex items-center gap-1">
                         <Clock className="size-3" />
                         {new Date(record.markedAt).toLocaleTimeString([], {
@@ -471,14 +471,14 @@ export default function LiveMonitorModal({ session, onClose }: LiveMonitorModalP
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-3 bg-slate-50 border-t border-slate-100 shrink-0">
+        <div className="flex items-center justify-between px-6 py-3 bg-[#08090B] border-t border-[#292D33] shrink-0">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
             disabled={exporting || records.length === 0}
-            className="text-xs text-slate-700 gap-1.5"
+            className="text-xs text-[#9B9EA6] gap-1.5"
           >
             <Download className="size-3.5" />
             Download OD Sheet (.csv)

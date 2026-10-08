@@ -94,22 +94,22 @@ export default function ManualEntryModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+      <div className="relative w-full max-w-md rounded-2xl bg-[#111318] shadow-2xl border border-[#292D33] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/80">
+        <div className="flex items-center justify-between border-b border-[#292D33] px-6 py-4 bg-[#08090B]/80">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-amber-50 text-amber-600 border border-amber-200">
               <UserPlus className="size-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Manual Attendance Entry</h2>
-              <p className="text-xs text-slate-500">Record attendance for students unable to scan</p>
+              <h2 className="text-base font-bold text-[#F3F1EC]">Manual Attendance Entry</h2>
+              <p className="text-xs text-[#686C74]">Record attendance for students unable to scan</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-[#686C74] hover:text-[#9B9EA6] hover:bg-[#171A20] transition-colors"
           >
             <X className="size-5" />
           </button>
@@ -118,12 +118,12 @@ export default function ManualEntryModal({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Target Session Banner */}
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-            <div className="flex items-center justify-between font-semibold text-slate-800">
+          <div className="p-3 rounded-xl bg-[#08090B] border border-[#292D33] text-xs">
+            <div className="flex items-center justify-between font-semibold text-[#F3F1EC]">
               <span>{session.sessionName}</span>
-              <span className="capitalize text-indigo-600">{session.period} Period</span>
+              <span className="capitalize text-[#FF2A1A]">{session.period} Period</span>
             </div>
-            <div className="text-[11px] text-slate-500 mt-0.5">{session.eventName}</div>
+            <div className="text-[11px] text-[#686C74] mt-0.5">{session.eventName}</div>
           </div>
 
           {/* Error Feedback */}
@@ -144,7 +144,7 @@ export default function ManualEntryModal({
 
           {/* Student Reg No */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-[#9B9EA6] mb-1">
               Registration Number
             </label>
             <input
@@ -153,13 +153,13 @@ export default function ManualEntryModal({
               placeholder="e.g. 917621104001"
               value={formData.studentRegNo}
               onChange={(e) => setFormData({ ...formData, studentRegNo: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 text-xs bg-[#08090B] border border-[#292D33] rounded-lg text-[#F3F1EC] font-mono focus:bg-[#111318] focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           {/* Student Name */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-[#9B9EA6] mb-1">
               Student Full Name
             </label>
             <input
@@ -168,18 +168,18 @@ export default function ManualEntryModal({
               placeholder="e.g. Aarav Kumar"
               value={formData.studentName}
               onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 text-xs bg-[#08090B] border border-[#292D33] rounded-lg text-[#F3F1EC] focus:bg-[#111318] focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           {/* Dept, Year, Sec */}
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Dept</label>
+              <label className="block text-xs font-semibold text-[#9B9EA6] mb-1">Dept</label>
               <select
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-2.5 py-2 text-xs bg-[#08090B] border border-[#292D33] rounded-lg text-[#F3F1EC] focus:bg-[#111318] focus:outline-none focus:border-indigo-500"
               >
                 <option value="CSE">CSE</option>
                 <option value="IT">IT</option>
@@ -194,11 +194,11 @@ export default function ManualEntryModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Year</label>
+              <label className="block text-xs font-semibold text-[#9B9EA6] mb-1">Year</label>
               <select
                 value={formData.year}
                 onChange={(e) => setFormData({ ...formData, year: Number(e.target.value) })}
-                className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-2.5 py-2 text-xs bg-[#08090B] border border-[#292D33] rounded-lg text-[#F3F1EC] focus:bg-[#111318] focus:outline-none focus:border-indigo-500"
               >
                 <option value={1}>1</option>
                 <option value={2}>2</option>
@@ -208,11 +208,11 @@ export default function ManualEntryModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Sec</label>
+              <label className="block text-xs font-semibold text-[#9B9EA6] mb-1">Sec</label>
               <select
                 value={formData.section}
                 onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-2.5 py-2 text-xs bg-[#08090B] border border-[#292D33] rounded-lg text-[#F3F1EC] focus:bg-[#111318] focus:outline-none focus:border-indigo-500"
               >
                 <option value="A">A</option>
                 <option value="B">B</option>
@@ -223,13 +223,13 @@ export default function ManualEntryModal({
 
           {/* Reason for Manual Entry */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-[#9B9EA6] mb-1">
               Reason / Audit Note
             </label>
             <select
               value={formData.reason}
               onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 text-xs bg-[#08090B] border border-[#292D33] rounded-lg text-[#F3F1EC] focus:bg-[#111318] focus:outline-none focus:border-indigo-500"
             >
               <option value="Device / Network Failure">Device battery dead / No network</option>
               <option value="Camera Scanner Malfunction">Camera / scanner failed to read QR</option>
@@ -239,7 +239,7 @@ export default function ManualEntryModal({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#292D33]">
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
               Done
             </Button>

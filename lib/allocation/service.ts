@@ -101,9 +101,30 @@ class AssociateAllocationService {
       );
     }
 
-    let records: AssociateAllocation[] = (
-      (data as AssociateAllocationRow[]) || []
-    ).map((row) => mapRowToAllocation(row));
+    const rows = (data as AssociateAllocationRow[]) || [];
+    if (rows.length === 0) return [];
+
+    // Batch resolve associate names and event names
+    const associateIds = [...new Set(rows.map((r) => r.associate_id))];
+    const nodeIds = [...new Set(rows.map((r) => r.event_node_id))];
+
+    const [{ data: associatesList }, { data: nodesList }] = await Promise.all([
+      supabase.from("associates").select("id, name, email").in("id", associateIds),
+      supabase.from("event_nodes").select("id, name, parent_id").in("id", nodeIds),
+    ]);
+
+    const associateMap = new Map((associatesList || []).map((a) => [a.id, a]));
+    const nodeMap = new Map((nodesList || []).map((n) => [n.id, n]));
+
+    let records: AssociateAllocation[] = rows.map((row) => {
+      const a = associateMap.get(row.associate_id);
+      const n = nodeMap.get(row.event_node_id);
+      return mapRowToAllocation(row, {
+        associateName: a?.name,
+        associateEmail: a?.email,
+        eventName: n?.name,
+      });
+    });
 
     if (filter?.search && filter.search.trim() !== "") {
       const q = filter.search.toLowerCase().trim();

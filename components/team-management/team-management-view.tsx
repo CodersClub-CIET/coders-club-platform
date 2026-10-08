@@ -124,7 +124,7 @@ export function TeamManagementView() {
     return (
       <p
         role="alert"
-        className="bg-white border border-slate-200 rounded-2xl p-6 text-sm text-slate-700"
+        className="rounded-xl border border-[#FF2A1A]/30 bg-[#FF2A1A]/5 p-6 text-sm text-[#FF2A1A] font-mono"
       >
         {listError ?? "You do not have permission to view Team Management."}
       </p>
@@ -135,9 +135,9 @@ export function TeamManagementView() {
     <div className="space-y-4">
       <div
         role="note"
-        className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+        className="inline-flex items-center gap-2 rounded-full border border-[#292D33] bg-[#0D0F12] px-3 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-[#686C74]"
       >
-        <Lock aria-hidden="true" className="size-3.5" />
+        <Lock aria-hidden="true" className="size-3.5 text-[#FF2A1A]" />
         READ ONLY
       </div>
 
@@ -154,15 +154,15 @@ export function TeamManagementView() {
 
         <div className="space-y-4 min-w-0">
           {!selectedId ? (
-            <p className="bg-white border border-slate-200 rounded-2xl p-6 text-sm text-slate-500">
-              Select a team to view details.
+            <p className="rounded-xl border border-[#292D33] bg-[#111318] p-6 text-sm text-[#686C74] font-mono">
+              Select a team from the list to view details.
             </p>
           ) : detailLoading ? (
-            <Loading label="Loading teams..." />
+            <Loading label="Loading team details..." />
           ) : detailError || !detail ? (
             <p
               role="alert"
-              className="bg-white border border-slate-200 rounded-2xl p-6 text-sm text-red-600"
+              className="rounded-xl border border-[#FF2A1A]/30 bg-[#FF2A1A]/5 p-6 text-sm text-[#FF2A1A] font-mono"
             >
               {detailError ?? "Unable to load team information."}
             </p>
